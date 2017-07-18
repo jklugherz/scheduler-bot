@@ -12,21 +12,6 @@ var app = express();
 app.use( bodyParser.json() );
 app.use( bodyParser.urlencoded( { extended: false } ) );
 
-
-app.get( '/', ( req, res ) => {
-    res.send( 'received :fire:' )
-} )
-
-app.post( '/slack/interactive', ( req, res ) => {
-    var payload = JSON.parse( req.body.payload );
-    console.log( payload );
-    if ( payload.actions[0].value === 'true' ) {
-        res.send( 'Creating event! :fire: ');
-    } else {
-        res.send( 'Cancelled :x:' )
-    }
-} )
-
 function getGoogleAuth() {
   return new OAuth2(
       process.env.OAUTH_CLIENT_ID,
@@ -92,6 +77,21 @@ app.get( '/oauthcallback', function ( req, res ) {
         })
       }
     })
+});
+
+app.get( '/', ( req, res ) => {
+    res.send( 'received :fire:' )
+});
+
+app.post( '/slack/interactive', ( req, res ) => {
+    var payload = JSON.parse( req.body.payload );
+    console.log( payload );
+    if ( payload.actions[0].value === 'true' ) {
+      //here we actually create the reminder
+        res.send( 'Creating event! :fire: ');
+    } else {
+        res.send( 'Cancelled :x:' )
+    }
 });
 
 app.listen( 3000 );
