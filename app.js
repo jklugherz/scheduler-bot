@@ -64,7 +64,7 @@ app.get( '/oauthcallback', function ( req, res ) {
                     console.log('error 2');
                     res.status( 500 ).json( { error: err } );
                 } else {
-                    User.findById( req.query.state )
+                    User.findById(JSON.parse(decodeURIComponent(req.query.state )).auth_id)
                         .then( function ( mongoUser ) {
                             mongoUser.google = tokens;
                             mongoUser.google.profile_id = googleUser.id;
