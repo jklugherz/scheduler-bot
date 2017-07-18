@@ -3,7 +3,7 @@ var axios = require('axios');
 
 // var bot_token = 'xoxb-214873434806-eyESITOHR146yGfFeFYnxNNE';
 
-var bot_token = 'xoxb-214174279413-IXvWa6Tozq57FGpKhsvlOW63';
+var bot_token = process.env.SLACK_BOT_TOKEN || '';
 var web = new WebClient(bot_token);
 var rtm = new RtmClient( bot_token );
 
@@ -39,8 +39,7 @@ rtm.on(RTM_EVENTS.MESSAGE, (msg) => {
       sessionId: msg.user
     },
     headers: {
-      Authorization: 'Bearer 4b56eeb0a61f4b11a9de11f49abcad89'
-      // Authorization : `Bearer ${process.env.API_AI_TOKEN}`
+      Authorization : `Bearer ${process.env.API_AI_TOKEN}`
     }
   })
   .then(({data}) => {
