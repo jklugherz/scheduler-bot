@@ -2,37 +2,25 @@ var express = require( 'express' );
 var session = require( 'express-session' );
 var path = require( 'path' );
 var bodyParser = require( 'body-parser' );
-
+require('./bot')
 var app = express();
 
 app.use( bodyParser.json() );
 app.use( bodyParser.urlencoded( { extended: false } ) );
 
-var RtmClient = require( '@slack/client' ).RtmClient;
-var CLIENT_EVENTS = require( '@slack/client' ).CLIENT_EVENTS;
-var RTM_EVENTS = require( '@slack/client' ).RTM_EVENTS;
 
-var bot_token = 'xoxb-214873434806-eyESITOHR146yGfFeFYnxNNE';
+app.get('/', (req, res) => {
+  res.send('received :fire:')
+})
 
-var rtm = new RtmClient( bot_token );
+app.post('/slack/interactive', (req, res) => {
+  var payload = JSON.parse(req.body.payload);
+  console.log(payload);
+  if (payload.actions[0].value === 'true') {
+    res.send('Created reminder :white_check_mark:')
+  } else {
+    res.send('Cancelled :x:')
+  }
+})
 
-let channel;
-
-// The client will emit an RTM.AUTHENTICATED event on successful connection, with the `rtm.start` payload
-rtm.on( CLIENT_EVENTS.RTM.AUTHENTICATED, ( rtmStartData ) => {
-    for ( const c of rtmStartData.channels ) {
-        if ( c.is_member && c.name === 'general' ) { channel = c.id }
-    }
-    console.log( `Logged in as ${ rtmStartData.self.name } of team ${ rtmStartData.team.name }, but not yet connected to a channel` );
-} );
-
-// you need to wait for the client to fully connect before you can send messages
-rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
-    rtm.sendMessage( 'Planner King active!', channel );
-} );
-
-rtm.on( RTM_EVENTS.MESSAGE, ( message ) => {
-
-} )
-
-rtm.start();
+app.listen(3000);
