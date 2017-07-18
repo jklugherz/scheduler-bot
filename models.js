@@ -15,15 +15,16 @@ var userSchema = mongoose.Schema({
   google: {}
 });
 
-var taskSchema = mongoose.Schema({
+var reminderSchema = mongoose.Schema({
   subject: String,
-  date: Date
+  date: Date, 
+  userId: String
 });
 
 User = mongoose.model('User', userSchema);
-Task = mongoose.model('Task', taskSchema);
+Reminder = mongoose.model('Reminder', reminderSchema);
 
 module.exports = {
     User: User,
-    Task: Task
+    Reminder: Reminder
 };

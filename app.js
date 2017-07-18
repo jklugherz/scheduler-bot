@@ -54,17 +54,17 @@ app.get( '/oauthcallback', function ( req, res ) {
     var googleAuth = getGoogleAuth();
     googleAuth.getToken( req.query.code, function ( err, tokens ) { //turn code into tokens (google's credentials)
         if ( err ) {
-            console.log('error 1');
+            console.log( 'error 1' );
             res.status( 500 ).json( { error: err } );
         } else {
             googleAuth.setCredentials( tokens ); //initialize google library with all credentials so it can make requests
             var plus = google.plus( 'v1' );
             plus.people.get( { auth: googleAuth, userId: 'me' }, function ( err, googleUser ) {
                 if ( err ) {
-                    console.log('error 2');
+                    console.log( 'error 2' );
                     res.status( 500 ).json( { error: err } );
                 } else {
-                    User.findById(JSON.parse(decodeURIComponent(req.query.state )).auth_id)
+                    User.findById( JSON.parse( decodeURIComponent( req.query.state ) ).auth_id )
                         .then( function ( mongoUser ) {
                             mongoUser.google = tokens;
                             mongoUser.google.profile_id = googleUser.id;
@@ -87,14 +87,54 @@ app.get( '/', ( req, res ) => {
 } );
 
 app.post( '/slack/interactive', ( req, res ) => {
-    var payload = JSON.parse( req.body.payload );
-    console.log( payload );
-    if ( payload.actions[0].value === 'true' ) {
-        //here we actually create the reminder
-        res.send( 'Creating event! :fire: ' );
-    } else {
-        res.send( 'Cancelled :x:' )
+  var payload = JSON.parse( req.body.payload );
+  console.log( payload );
+  if ( payload.actions[0].value === 'true' ) {
+    var subject = payload.original_message.attachments[0].fallback.split("%")[0]
+    var date = payload.original_message.attachments[0].fallback.split("%")[1]
+    var event = {
+      description: subject,
+      start: {
+        dateTime: date + 'T5:00:00-07:00',
+        timeZone: 'America/Los_Angeles'
+      },
+      end: {
+        dateTime: date + 'T23:59:00-07:00',
+        timeZone: 'America/Los_Angeles'
+      },
+      reminders: {
+        'useDefault': false,
+        'overrides': [
+        {'method': 'email', 'minutes': 24 * 60},
+        {'method': 'popup', 'minutes': 10},
+        ],
+      },
     }
-} );
+    var calendar = google.calendar('v3');
+    User.find({slackId: payload.user.id}, function(err, user){
+      if(err){
+        throw new Error('err')
+      }
+      else{
+        calendar.events.insert({
+          auth: user.google.access_token,
+          calendarId: 'primary',
+          resource: event,
+        }, function(err, event) {
+          if (err) {
+            console.log('There was an error contacting the Calendar service: ' + err);
+            return;
+          }
+          console.log('Event created: %s', event.htmlLink);
+        });
+      }
+    })
+
+
+    res.send( 'Creating event! :fire: ');
+  } else {
+    res.send( 'Cancelled :x:' )
+  }
+});
 
 app.listen( 3000 );

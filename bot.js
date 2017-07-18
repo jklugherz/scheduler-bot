@@ -69,7 +69,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                     {
                                         "attachments": [
                                             {
-                                                "fallback": "Unable to set reminder",
+                                                "fallback": `${ data.result.parameters.subject }%` + `${ data.result.parameters.date }`,
                                                 "callback_id": "reminder",
                                                 "color": "#3AA3E3",
                                                 "attachment_type": "default",
