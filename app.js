@@ -58,20 +58,39 @@ app.get( '/connect', ( req, res ) => {
               //     auth_id: req.query.auth_id
               // }))
           });
-          res.redirect( url );
+          res.redirect( url ); //send to google to authenticate
         };
       });
     };
 });
 
 app.get( '/oauthcallback', function ( req, res ) {
-    // console.log( 'hello' );
-    // console.log( req.query.code );
-    // res.send('Good job tommy')
-    res.json({
-      code: req.query.code,
-      state: req.query.state
+    //callback contains an authorization code, use it to get a token.
+    var googleAuth = getGoogleAuth();
+    googleAuth.getToken(req.query.code, function(err, tokens) { //turn code into tokens (google's credentials)
+      if (err) {
+        res.status(500).json({error: err});
+      } else {
+        googleAuth.setCredentials(tokens); //initialize google library with all credentials so it can make requests
+        var plus = google.plus('v1');
+        plus.people.get({auth: googleAuth, userId: 'me'}, function(err, googleUser) {
+          if (err) {
+            res.status(500).json({error: err});
+          } else {
+            User.findById(req.query.state)
+            .then(function(mongoUser) {
+              mongoUser.google = tokens;
+              mongoUser.google.profile_id = googleUser.id;
+              mongoUser.google.profile_name = googleUser.displayName;
+              return mongoUser.save();
+            });
+            .then(function(mongoUser) {
+              res.send('You are connected to Google Calendar!');
+            });
+          };
+        })
+      }
     })
-} )
+});
 
 app.listen( 3000 );
