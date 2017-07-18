@@ -1,8 +1,9 @@
 var mongoose = require('mongoose');
 
 var userSchema = mongoose.Schema({
-  username: String,
-  password: String
+  slackName: String,
+  slackId: String,
+  googleProfile: {}
 });
 
 var taskSchema = mongoose.Schema({
