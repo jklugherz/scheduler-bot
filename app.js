@@ -2,25 +2,55 @@ var express = require( 'express' );
 var session = require( 'express-session' );
 var path = require( 'path' );
 var bodyParser = require( 'body-parser' );
-require('./bot')
+require( './bot' )
 var app = express();
+
+var google = require('googleapis');
+var OAuth2 = google.auth.OAuth2;
 
 app.use( bodyParser.json() );
 app.use( bodyParser.urlencoded( { extended: false } ) );
 
 
-app.get('/', (req, res) => {
-  res.send('received :fire:')
-})
+app.get( '/', ( req, res ) => {
+    res.send( 'received :fire:' )
+} )
 
-app.post('/slack/interactive', (req, res) => {
-  var payload = JSON.parse(req.body.payload);
-  console.log(payload);
-  if (payload.actions[0].value === 'true') {
-    res.send('Created reminder :white_check_mark:')
-  } else {
-    res.send('Cancelled :x:')
-  }
-})
+app.post( '/slack/interactive', ( req, res ) => {
+    var payload = JSON.parse( req.body.payload );
+    console.log( payload );
+    if ( payload.actions[0].value === 'true' ) {
+        res.send( 'Creating event! :fire: ');
+    } else {
+        res.send( 'Cancelled :x:' )
+    }
+} )
 
-app.listen(3000);
+app.get( '/connect', ( req, res ) => {
+    console.log( 'WOWOWOWOOWOWOW' )
+    var oauth2Client = new OAuth2(
+        process.env.OAUTH_CLIENT_ID,
+        process.env.OAUTH_SECRET,
+        process.env.DOMAIN + '/oauthcallback'
+    );
+    var url = oauth2Client.generateAuthUrl( {
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: [
+            'https://www.googleapis.com/auth/userinfo.profile',
+            'https://www.googleapis.com/auth/calendar'
+        ],
+        state: encodeURIComponent( JSON.stringify( {
+            auth_id: req.query.auth_id
+        } ) )
+    } );
+    res.redirect( url );
+} )
+
+app.get( '/oauthcallback', function ( req, res ) {
+    console.log( 'hello' );
+    console.log( req.query.code );
+    res.send('Good job tommy')
+} )
+
+app.listen( 3000 );
