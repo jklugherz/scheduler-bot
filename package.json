@@ -13,6 +13,7 @@
     "express": "~4.13.1",
     "express-session": "^1.13.0",
     "google-auth-library": "^0.10.0",
-    "googleapis": "^20.1.0"
+    "googleapis": "^20.1.0",
+    "mongoose": "^4.11.3"
   }
 }
