@@ -1,7 +1,6 @@
 var { RtmClient, WebClient, CLIENT_EVENTS, RTM_EVENTS } = require( '@slack/client' );
 var axios = require( 'axios' );
-
-// var bot_token = 'xoxb-214873434806-eyESITOHR146yGfFeFYnxNNE';
+var { User } = require('./models');
 
 var bot_token = process.env.SLACK_BOT_TOKEN || '';
 var web = new WebClient( bot_token );
