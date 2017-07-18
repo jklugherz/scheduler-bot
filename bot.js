@@ -104,3 +104,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
 } );
 
 rtm.start();
+
+module.exports = {
+  rtm
+}

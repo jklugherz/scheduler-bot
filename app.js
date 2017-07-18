@@ -2,12 +2,12 @@ var express = require( 'express' );
 var session = require( 'express-session' );
 var path = require( 'path' );
 var bodyParser = require( 'body-parser' );
-require( './bot' )
-var app = express();
-
+var { rtm } = require( './bot' )
 var google = require('googleapis');
 var OAuth2 = google.auth.OAuth2;
 var { User } = require('./models');
+
+var app = express();
 
 app.use( bodyParser.json() );
 app.use( bodyParser.urlencoded( { extended: false } ) );
@@ -85,7 +85,8 @@ app.get( '/oauthcallback', function ( req, res ) {
               return mongoUser.save();
             });
             .then(function(mongoUser) {
-              res.send('You are connected to Google Calendar!');
+              res.send('You are connected to Google Calendar!'); //sends to webpage
+              rtm.sendMessage('You are connected to Google Calendar!'); //sends from bot to user
             });
           };
         })
