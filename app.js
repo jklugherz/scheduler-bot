@@ -87,7 +87,26 @@ app.post( '/slack/interactive', ( req, res ) => {
     var payload = JSON.parse( req.body.payload );
     console.log( payload );
     if ( payload.actions[0].value === 'true' ) {
-      //here we actually create the reminder
+      var subject = payload.original_message.attachments[0].fallback.split("%")[0]
+    var date = payload.original_message.attachments[0].fallback.split("%")[1]
+    var event = {
+      description: subject,
+      start: {
+        dateTime: date + 'T5:00:00-07:00',
+        timeZone: 'America/Los_Angeles'
+      },
+      end: {
+        dateTime: date + 'T23:59:00-07:00',
+        timeZone: 'America/Los_Angeles'
+      },
+      reminders: {
+        'useDefault': false,
+        'overrides': [
+        {'method': 'email', 'minutes': 24 * 60},
+        {'method': 'popup', 'minutes': 10},
+        ],
+      },
+    }
         res.send( 'Creating event! :fire: ');
     } else {
         res.send( 'Cancelled :x:' )

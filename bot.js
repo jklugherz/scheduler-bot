@@ -1,6 +1,6 @@
 var { RtmClient, WebClient, CLIENT_EVENTS, RTM_EVENTS } = require( '@slack/client' );
 var axios = require( 'axios' );
-var { User } = require('./models');
+var { User, Reminder } = require('./models');
 
 var bot_token = process.env.SLACK_BOT_TOKEN || '';
 var web = new WebClient( bot_token );
@@ -67,33 +67,71 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                   if ( data.result.actionIncomplete ) {
                       rtm.sendMessage( data.result.fulfillment.speech, msg.channel );
                   } else {
-                      web.chat.postMessage( msg.channel,
-                          `Creating reminder for '${ data.result.parameters.subject }' on ${ data.result.parameters.date }`,
-                          {
-                              "attachments": [
+                            //have to check if intentName is Reminder or Meeting
+                            if(data.metadata.intentName === "Reminder"){
+                              var rem = new Reminder({
+                                subject: data.result.parameters.subject,
+                                date: data.result.parameters.date, 
+                                userId: msg.user
+                              })
+                              rem.save();
+                              web.chat.postMessage(msg.channel,
+                                `Creating reminder for '${data.result.parameters.subject}' on ${data.result.parameters.date}`,
+                                {
+                                  "attachments": [
                                   {
-                                      "fallback": "Unable to set reminder",
-                                      "callback_id": "reminder",
-                                      "color": "#3AA3E3",
-                                      "attachment_type": "default",
-                                      "actions": [
-                                          {
-                                              "name": "confirm",
-                                              "text": "Confirm",
-                                              "type": "button",
-                                              "value": "true"
-                                          },
-                                          {
-                                              "name": "cancel",
-                                              "text": "Cancel",
-                                              "type": "button",
-                                              "value": "false"
-                                          }
-                                      ]
+                                    "fallback": `${data.result.parameters.subject}%` + `${data.result.parameters.date}`,
+                                    "callback_id": "reminder",
+                                    "color": "#3AA3E3",
+                                    "attachment_type": "default",
+                                    "actions": [
+                                    {
+                                      "name": "confirm",
+                                      "text": "Confirm",
+                                      "type": "button",
+                                      "value": "true"
+                                    },
+                                    {
+                                      "name": "cancel",
+                                      "text": "Cancel",
+                                      "type": "button",
+                                      "value": "false"
+                                    }
+                                    ]
                                   }
-                              ]
-                          }
-                      );
+                                  ]
+                                }
+                                );
+                            }
+                            if(data.metadata.intentName === "Meetings"){
+                              web.chat.postMessage(msg.channel,
+                                `Creating meeting with '${data.result.parameters.people}' on ${data.result.parameters.date} at ${data.result.parameters.time}: ${data.result.parameters.subject}`,
+                                {
+                                  "attachments": [
+                                  {
+                                    "fallback": `${data.result.parameters.subject}%` + `${data.result.parameters.date}%` + `${data.result.parameters.time}%`  + `${data.result.parameters.subject}`,
+                                    "callback_id": "reminder",
+                                    "color": "#3AA3E3",
+                                    "attachment_type": "default",
+                                    "actions": [
+                                    {
+                                      "name": "confirm",
+                                      "text": "Confirm",
+                                      "type": "button",
+                                      "value": "true"
+                                    },
+                                    {
+                                      "name": "cancel",
+                                      "text": "Cancel",
+                                      "type": "button",
+                                      "value": "false"
+                                    }
+                                    ]
+                                  }
+                                  ]
+                                }
+                                );
+                            }
                   }
               } )
               .catch( err => {
