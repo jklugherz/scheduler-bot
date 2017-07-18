@@ -5,15 +5,15 @@ var userSchema = mongoose.Schema({
   password: String
 });
 
-var reminderSchema = mongoose.Schema({
+var taskSchema = mongoose.Schema({
   subject: String,
   date: Date
 });
 
 User = mongoose.model('User', userSchema);
-Reminder = mongoose.model('Reminder', reminderSchema);
+Task = mongoose.model('Task', taskSchema);
 
 module.exports = {
-    User:User,
-    Reminder:Reminder
+    User: User,
+    Task: Task
 };
