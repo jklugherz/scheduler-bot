@@ -7,6 +7,7 @@ var app = express();
 
 var google = require('googleapis');
 var OAuth2 = google.auth.OAuth2;
+var { User } = require('./models');
 
 app.use( bodyParser.json() );
 app.use( bodyParser.urlencoded( { extended: false } ) );
@@ -26,31 +27,51 @@ app.post( '/slack/interactive', ( req, res ) => {
     }
 } )
 
+function getGoogleAuth() {
+  return new OAuth2(
+      process.env.OAUTH_CLIENT_ID,
+      process.env.OAUTH_SECRET,
+      process.env.DOMAIN + '/oauthcallback'
+  );
+};
+
 app.get( '/connect', ( req, res ) => {
-    console.log( 'WOWOWOWOOWOWOW' )
-    var oauth2Client = new OAuth2(
-        process.env.OAUTH_CLIENT_ID,
-        process.env.OAUTH_SECRET,
-        process.env.DOMAIN + '/oauthcallback'
-    );
-    var url = oauth2Client.generateAuthUrl( {
-        access_type: 'offline',
-        prompt: 'consent',
-        scope: [
-            'https://www.googleapis.com/auth/userinfo.profile',
-            'https://www.googleapis.com/auth/calendar'
-        ],
-        state: encodeURIComponent( JSON.stringify( {
-            auth_id: req.query.auth_id
-        } ) )
-    } );
-    res.redirect( url );
-} )
+    var userId = req.query.user;
+    if (!userId) {
+      res.status(400).send('Missing user id');
+    } else {
+      User.findById(userId)
+      .then(function(user) {
+        if (!user) {
+          res.status(404).send('Cannot find user');
+        } else { //have a user, ready to connect to google
+          var oauth2Client = getGoogleAuth();
+          var url = oauth2Client.generateAuthUrl({
+              access_type: 'offline',
+              prompt: 'consent',
+              scope: [
+                  'https://www.googleapis.com/auth/userinfo.profile',
+                  'https://www.googleapis.com/auth/calendar'
+              ],
+              state: userId
+              // encodeURIComponent(JSON.stringify( {
+              //     auth_id: req.query.auth_id
+              // }))
+          });
+          res.redirect( url );
+        };
+      });
+    };
+});
 
 app.get( '/oauthcallback', function ( req, res ) {
-    console.log( 'hello' );
-    console.log( req.query.code );
-    res.send('Good job tommy')
+    // console.log( 'hello' );
+    // console.log( req.query.code );
+    // res.send('Good job tommy')
+    res.json({
+      code: req.query.code,
+      state: req.query.state
+    })
 } )
 
 app.listen( 3000 );
