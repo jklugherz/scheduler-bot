@@ -14,39 +14,39 @@ app.use( bodyParser.urlencoded( { extended: false } ) );
 
 function getGoogleAuth() {
   return new OAuth2(
-      process.env.OAUTH_CLIENT_ID,
-      process.env.OAUTH_SECRET,
-      process.env.DOMAIN + '/oauthcallback'
-  );
+    process.env.OAUTH_CLIENT_ID,
+    process.env.OAUTH_SECRET,
+    process.env.DOMAIN + '/oauthcallback'
+    );
 };
 
 app.get( '/connect', ( req, res ) => {
-    var userId = req.query.user;
-    if (!userId) {
-      res.status(400).send('Missing user id');
-    } else {
-      User.findById(userId)
-      .then(function(user) {
-        if (!user) {
-          res.status(404).send('Cannot find user');
+  var userId = req.query.user;
+  if (!userId) {
+    res.status(400).send('Missing user id');
+  } else {
+    User.findById(userId)
+    .then(function(user) {
+      if (!user) {
+        res.status(404).send('Cannot find user');
         } else { //have a user, ready to connect to google
           var oauth2Client = getGoogleAuth();
           var url = oauth2Client.generateAuthUrl({
-              access_type: 'offline',
-              prompt: 'consent',
-              scope: [
-                  'https://www.googleapis.com/auth/userinfo.profile',
-                  'https://www.googleapis.com/auth/calendar'
-              ],
-              state: userId
+            access_type: 'offline',
+            prompt: 'consent',
+            scope: [
+            'https://www.googleapis.com/auth/userinfo.profile',
+            'https://www.googleapis.com/auth/calendar'
+            ],
+            state: userId
               // encodeURIComponent(JSON.stringify( {
               //     auth_id: req.query.auth_id
               // }))
-          });
+            });
           res.redirect( url ); //send to google to authenticate
         };
       });
-    };
+  };
 });
 
 app.get( '/oauthcallback', function ( req, res ) {
@@ -77,17 +77,17 @@ app.get( '/oauthcallback', function ( req, res ) {
         })
       }
     })
-});
+  });
 
 app.get( '/', ( req, res ) => {
-    res.send( 'received :fire:' )
+  res.send( 'received :fire:' )
 });
 
 app.post( '/slack/interactive', ( req, res ) => {
-    var payload = JSON.parse( req.body.payload );
-    console.log( payload );
-    if ( payload.actions[0].value === 'true' ) {
-      var subject = payload.original_message.attachments[0].fallback.split("%")[0]
+  var payload = JSON.parse( req.body.payload );
+  console.log( payload );
+  if ( payload.actions[0].value === 'true' ) {
+    var subject = payload.original_message.attachments[0].fallback.split("%")[0]
     var date = payload.original_message.attachments[0].fallback.split("%")[1]
     var event = {
       description: subject,
@@ -107,10 +107,31 @@ app.post( '/slack/interactive', ( req, res ) => {
         ],
       },
     }
-        res.send( 'Creating event! :fire: ');
-    } else {
-        res.send( 'Cancelled :x:' )
-    }
+    var calendar = google.calendar('v3');
+    User.find({slackId: payload.user.id}, function(err, user){
+      if(err){
+        throw new Error('err')
+      }
+      else{
+        calendar.events.insert({
+          auth: user.google.access_token,
+          calendarId: 'primary',
+          resource: event,
+        }, function(err, event) {
+          if (err) {
+            console.log('There was an error contacting the Calendar service: ' + err);
+            return;
+          }
+          console.log('Event created: %s', event.htmlLink);
+        });
+      }
+    })
+    
+
+    res.send( 'Creating event! :fire: ');
+  } else {
+    res.send( 'Cancelled :x:' )
+  }
 });
 
 app.listen( 3000 );
