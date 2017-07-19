@@ -1,125 +1,159 @@
-var express = require('express');
-var session = require('express-session');
-var MongoStore = require('connect-mongo')(session);
-var path = require('path');
-var logger = require('morgan');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
-var passport = require('passport');
-var LocalStrategy = require('passport-local');
-var mongoose = require('mongoose');
-var connect = process.env.MONGODB_URI;
+var express = require( 'express' );
+var session = require( 'express-session' );
+var path = require( 'path' );
+var bodyParser = require( 'body-parser' );
+var { rtm } = require( './bot' )
+var google = require( 'googleapis' );
+var googleAuth = require( 'google-auth-library' );
+var OAuth2 = google.auth.OAuth2;
+var { User, Reminder } = require( './models' );
+var moment = require('moment');
 
-var REQUIRED_ENV = "SECRET MONGODB_URI".split(" ");
-
-REQUIRED_ENV.forEach(function(el) {
-  if (!process.env[el]){
-    console.error("Missing required env var " + el);
-    process.exit(1);
-  }
-});
-
-
-mongoose.connect(connect);
-
-var models = require('./models');
-
-var routes = require('./routes/routes');
-var auth = require('./routes/auth');
 var app = express();
 
-// view engine setup
-var hbs = require('express-handlebars')({
-  defaultLayout: 'main',
-  extname: '.hbs'
-});
-app.engine('hbs', hbs);
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'hbs');
+app.use( bodyParser.json() );
+app.use( bodyParser.urlencoded( { extended: false } ) );
 
-app.use(logger('tiny'));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+function getGoogleAuth() {
+    return new OAuth2(
+        process.env.OAUTH_CLIENT_ID,
+        process.env.OAUTH_SECRET,
+        process.env.DOMAIN + '/oauthcallback'
+    );
+};
 
-// Passport
-app.use(session({
-  secret: process.env.SECRET,
-  store: new MongoStore({ mongooseConnection: mongoose.connection })
-}));
+app.get( '/connect', ( req, res ) => {
+    var userId = req.query.user;
+    if ( !userId ) {
+        res.status( 400 ).send( 'Missing user id' );
+    } else {
+        User.findById( userId )
+            .then( function ( user ) {
+                if ( !user ) {
+                    res.status( 404 ).send( 'Cannot find user' );
+                } else { //have a user, ready to connect to google
+                    var oauth2Client = getGoogleAuth();
+                    var url = oauth2Client.generateAuthUrl( {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                        scope: [
+                            'https://www.googleapis.com/auth/userinfo.profile',
+                            'https://www.googleapis.com/auth/calendar'
+                        ],
+                        state: encodeURIComponent( JSON.stringify( {
+                            auth_id: userId
+                        } ) )
+                    } );
+                    res.redirect( url ); //send to google to authenticate
+                };
+            } );
+    };
+} );
+
+app.get( '/oauthcallback', function ( req, res ) {
+    //callback contains an authorization code, use it to get a token.
+    var googleAuth = getGoogleAuth();
+    googleAuth.getToken( req.query.code, function ( err, tokens ) { //turn code into tokens (google's credentials)
+        if ( err ) {
+            res.status( 500 ).json( { error: err } );
+        } else {
+            googleAuth.setCredentials( tokens ); //initialize google library with all credentials so it can make requests
+            var plus = google.plus( 'v1' );
+            plus.people.get( { auth: googleAuth, userId: 'me' }, function ( err, googleUser ) {
+                if ( err ) {
+                    res.status( 500 ).json( { error: err } );
+                } else {
+                    User.findById( JSON.parse( decodeURIComponent( req.query.state ) ).auth_id )
+                        .then( function ( mongoUser ) {
+                            mongoUser.google = tokens;
+                            mongoUser.google.profile_id = googleUser.id;
+                            mongoUser.google.profile_name = googleUser.displayName;
+                            return mongoUser.save();
+                        } )
+                        .then( function ( mongoUser ) {
+                            res.send( 'You are connected to Google Calendar!' ); //sends to webpage
+                        } )
+                        .catch( function ( err ) { console.log( 'Server error at /oauthcallback', err ); } );
+                };
+            } )
+        }
+    } )
+} );
+
+app.get( '/', ( req, res ) => {
+    res.send( 'Event created! :fire:' )
+} );
+
+app.post( '/slack/interactive', ( req, res ) => {
+    var payload = JSON.parse( req.body.payload );
+    if ( payload.actions[0].value === 'true' ) {
+        var subject = payload.original_message.attachments[0].fallback.split( "%" )[0]
+        var date = payload.original_message.attachments[0].fallback.split( "%" )[1]
+        var day = moment( date ).format( "YYYY-MM-DD" )
+        var rem = new Reminder( {
+            subject: subject,
+            date: day,
+            userId: payload.original_message.attachments[0].fallback.split( "%" )[2]
+        } )
+       
+        rem.save();
+        var event = {
+            summary: subject,
+            description: subject,
+            start: {
+                dateTime: date + 'T5:00:00-00:01',
+                timeZone: 'America/Los_Angeles'
+            },
+            end: {
+                dateTime: date + 'T23:59:00-00:01',
+                timeZone: 'America/Los_Angeles'
+            },
+            reminders: {
+                'useDefault': false,
+                'overrides': [
+                    { 'method': 'email', 'minutes': 24 * 60 },
+                    { 'method': 'popup', 'minutes': 10 },
+                ],
+            },
+        }
+        var calendar = google.calendar( 'v3' );
+        User.findOne( { slackId: payload.user.id }, function ( err, user ) {
+            if ( err ) {
+                throw new Error( err );
+            }
+            else {
+                var auth = getGoogleAuth();
+                auth.credentials = user.google;
+                if ( user.google.expiry_date < new Date().getTime() ) {
+                    auth.refreshAccessToken(function( err, tokens ) {
+                        if (err) {
+                            throw new Error( err );
+                        } else {
+                            user.google = tokens;
+                            user.save();
+                        }
+                    })
+                }
+                calendar.events.insert( {
+                    auth: auth,
+                    calendarId: 'primary',
+                    resource: event,
+                }, function ( err, event ) {
+                    if ( err ) {
+                        console.log( 'There was an error contacting the Calendar service: ' + err );
+                        return;
+                    }
+                    console.log( 'Event created: %s', event.htmlLink );
+                } );
+            }
+        } )
 
 
-app.use(passport.initialize());
-app.use(passport.session());
-
-passport.serializeUser(function(user, done) {
-  done(null, user._id);
-});
-
-passport.deserializeUser(function(id, done) {
-  models.User.findById(id, done);
-});
-
-// passport strategy
-passport.use(new LocalStrategy(function(username, password, done) {
-  // Find the user with the given username
-  models.User.findOne({ username: username }, function (err, user) {
-    // if there's an error, finish trying to authenticate (auth failed)
-    if (err) {
-      console.error('Error fetching user in LocalStrategy', err);
-      return done(err);
+        res.send( 'Creating event! :fire: ' );
+    } else {
+        res.send( 'Cancelled :x:' )
     }
-    // if no user present, auth failed
-    if (!user) {
-      return done(null, false, { message: 'Incorrect username.' });
-    }
-    // if passwords do not match, auth failed
-    if (user.password !== password) {
-      return done(null, false, { message: 'Incorrect password.' });
-    }
-    // auth has has succeeded
-    return done(null, user);
-  });
-}
-));
+} );
 
-app.use('/', auth(passport));
-app.use('/', routes);
-
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  var err = new Error('Not Found');
-  err.status = 404;
-  next(err);
-});
-
-// error handlers
-
-// development error handler
-// will print stacktrace
-if (app.get('env') === 'development') {
-  app.use(function(err, req, res, next) {
-    res.status(err.status || 500);
-    res.render('error', {
-      message: err.message,
-      error: err
-    });
-  });
-}
-
-// production error handler
-// no stacktraces leaked to user
-app.use(function(err, req, res, next) {
-  res.status(err.status || 500);
-  res.render('error', {
-    message: err.message,
-    error: {}
-  });
-});
-
-var port = process.env.PORT || 3000;
-app.listen(port);
-console.log('Express started. Listening on port %s', port);
-
-module.exports = app;
+var port = process.env.PORT ||  3000;
+app.listen( port );
