@@ -106,9 +106,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                     return axios( 'https://slack.com/api/users.profile.get', {
                                         token: process.env.SLACK_BOT_TOKEN,
                                         user: word.slice( 2, word.length - 1 )
-                                    } ).then( function ( user ) {
-                                        return user.email;
-                                    } )
+                                    } ).email
                                 } else { return word }
                             } )
                             tempMsg = textArr.join(' ');
