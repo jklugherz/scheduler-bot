@@ -5,7 +5,7 @@ var { User, Reminder } = require( './models' );
 var bot_token = process.env.SLACK_BOT_TOKEN || '';
 var web = new WebClient( bot_token );
 var rtm = new RtmClient( bot_token );
-var moment = require('moment');
+var moment = require( 'moment' );
 
 let channel;
 
@@ -20,38 +20,36 @@ rtm.on( CLIENT_EVENTS.RTM.AUTHENTICATED, ( rtmStartData ) => {
 // you need to wait for the client to fully connect before you can send messages
 rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
     rtm.sendMessage( 'Planner Khaleesi active!', channel );
+    setInterval( function () {
+        var today = moment().format( "YYYY-MM-DD" );
+        console.log( today )
+        Reminder.find( { date: today }, function ( err, rems ) {
+            if ( err ) {
+                throw new Error( "err" )
+            }
+            else {
+                rems.forEach( function ( item ) {
+                    var dm = rtm.dataStore.getDMByUserId( item.userId );
+                    rtm.sendMessage( `you have to ${ item.subject } today`, dm.id );
+                    console.log( 'Message sent to ', dm.id, item.subject )
+                } )
+            }
+        } )
+        Reminder.remove( { date: today } );
 
-    var today = moment().format("YYYY-MM-DD");
-    console.log(today)
-    //var arr = []
-    Reminder.find( { date: today }, function ( err, rems ) {
-        if ( err ) {
-            throw new Error( "err" )
-        }
-        else {
+        var tomorrow = moment().add( 'days', 1 ).format( "YYYY-MM-DD" );
+
+        Reminder.find( { date: tomorrow }, function ( err, rems ) {
+            if ( err ) {
+                throw new Error( "err" )
+            }
             rems.forEach( function ( item ) {
                 var dm = rtm.dataStore.getDMByUserId( item.userId );
-                rtm.sendMessage( `you have to ${ item.subject } today`, dm.id );
+                rtm.sendMessage( `you have to ${ item.subject } tomorrow`, dm.id );
                 console.log( 'Message sent to ', dm.id, item.subject )
             } )
-        }
-        //arr.concat(rems)
-    } )
-    Reminder.remove( { date: today } );
-
-    var tomorrow = moment().add('days', 1).format("YYYY-MM-DD");
-    
-    Reminder.find( { date: tomorrow }, function ( err, rems ) {
-        if ( err ) {
-            throw new Error( "err" )
-        }
-        rems.forEach( function ( item ) {
-            var dm = rtm.dataStore.getDMByUserId( item.userId );
-            rtm.sendMessage( `you have to ${ item.subject } tomorrow`, dm.id );
-            console.log( 'Message sent to ', dm.id, item.subject )
         } )
-        //arr.concat(rems)
-    } )
+    }, 43200000 )
 
 } );
 
@@ -96,13 +94,13 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                             if ( data.result.actionIncomplete ) {
                                 rtm.sendMessage( data.result.fulfillment.speech, msg.channel );
                             } else {
-                                
+
                                 web.chat.postMessage( msg.channel,
                                     `Creating reminder for '${ data.result.parameters.subject }' on ${ data.result.parameters.date }`,
                                     {
                                         "attachments": [
                                             {
-                                                "fallback": `${ data.result.parameters.subject }%` + `${ data.result.parameters.date }%` + `${msg.user}`,
+                                                "fallback": `${ data.result.parameters.subject }%` + `${ data.result.parameters.date }%` + `${ msg.user }`,
                                                 "callback_id": "reminder",
                                                 "color": "#3AA3E3",
                                                 "attachment_type": "default",
