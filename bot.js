@@ -54,7 +54,6 @@ function checkReminders() {
         if ( rems.length !== 0 ) {
             rems.forEach( function ( item ) {
                 var dm = rtm.dataStore.getDMByUserId( item.userId );
-                //console.log(dm)
                 rtm.sendMessage( `you have to ${ item.subject } tomorrow`, dm.id );
                 console.log( 'Message sent to ', dm.id, item.subject )
             } )
@@ -75,7 +74,6 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
     if ( !dm || dm.id !== msg.channel || msg.type !== 'message' ) {
         return;
     } else {
-        // rtm.sendMessage(msg.text, msg.channel);
         User.findOne( { slackId: msg.user } )
             .then( function ( user ) {
                 if ( !user ) {
@@ -97,12 +95,12 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                 } else {
                     if ( pendingUsers.includes( user.slackId ) ) {
                         rtm.sendMessage( 'You need to confirm or cancel your request', msg.channel )
-                        //console.log('rpi')
                     }
                     else {
+                        let tempMsg = msg.text;
                         if ( msg.text.includes( '<@' ) ) {
                             let textArr = msg.text.split( ' ' );
-                            textArr.map( function ( word ) {
+                            textArr = textArr.map( function ( word ) {
                                 if ( word.includes( '<@' ) ) {
                                     return fetch( 'https://slack.com/api/users.profile.get', {
                                         token: process.env.SLACK_BOT_TOKEN,
@@ -112,13 +110,14 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                     } )
                                 } else { return word }
                             } )
+                            tempMsg = textArr.join(' ');
                         }
                         axios.get( 'https://api.api.ai/api/query', {
                             params: {
                                 v: 20150910,
                                 lang: 'en',
                                 timezone: '2017-07-17T16:55:52-0700',
-                                query: msg.text,
+                                query: tempMsg,
                                 sessionId: msg.user
                             },
                             headers: {
@@ -130,7 +129,6 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                     rtm.sendMessage( data.result.fulfillment.speech, msg.channel );
                                 } else {
                                     pendingUsers.push( user.slackId );
-                                    //console.log(data.result.parameters.people)
                                     var messageString = data.result.parameters.people ? `Scheduling meeting with ${ data.result.parameters.people } on ${ data.result.parameters.date } at ${ data.result.parameters.time } ${ data.result.parameters.subject ? ( ': ' + data.result.parameters.subject ) : '' }` : `Creating reminder for '${ data.result.parameters.subject }' on ${ data.result.parameters.date }`
                                     web.chat.postMessage( msg.channel,
                                         messageString,
