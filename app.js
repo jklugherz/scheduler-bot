@@ -27,10 +27,8 @@ app.get( '/connect', ( req, res ) => {
     if ( !userId ) {
         res.status( 400 ).send( 'Missing user id' );
     } else {
-        console.log('checking for user');
         User.findById( userId )
             .then( function ( user ) {
-                console.log('found user');
                 if ( !user ) {
                     res.status( 404 ).send( 'Cannot find user' );
                 } else { //have a user, ready to connect to google
@@ -147,4 +145,5 @@ app.post( '/slack/interactive', ( req, res ) => {
     }
 } );
 
-app.listen( 3000 );
+var port = process.env.PORT ||  3000;
+app.listen( port );
