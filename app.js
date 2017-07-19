@@ -4,6 +4,7 @@ var path = require( 'path' );
 var bodyParser = require( 'body-parser' );
 var { rtm } = require( './bot' )
 var google = require( 'googleapis' );
+var googleAuth = require( 'google-auth-library' );
 var OAuth2 = google.auth.OAuth2;
 var { User } = require( './models' );
 
@@ -83,58 +84,61 @@ app.get( '/oauthcallback', function ( req, res ) {
 } );
 
 app.get( '/', ( req, res ) => {
-    res.send( 'received :fire:' )
+    res.send( 'Event created! :fire:' )
 } );
 
 app.post( '/slack/interactive', ( req, res ) => {
-  var payload = JSON.parse( req.body.payload );
-  console.log( payload );
-  if ( payload.actions[0].value === 'true' ) {
-    var subject = payload.original_message.attachments[0].fallback.split("%")[0]
-    var date = payload.original_message.attachments[0].fallback.split("%")[1]
-    var event = {
-      description: subject,
-      start: {
-        dateTime: date + 'T5:00:00-07:00',
-        timeZone: 'America/Los_Angeles'
-      },
-      end: {
-        dateTime: date + 'T23:59:00-07:00',
-        timeZone: 'America/Los_Angeles'
-      },
-      reminders: {
-        'useDefault': false,
-        'overrides': [
-        {'method': 'email', 'minutes': 24 * 60},
-        {'method': 'popup', 'minutes': 10},
-        ],
-      },
+    var payload = JSON.parse( req.body.payload );
+    console.log( payload );
+    if ( payload.actions[0].value === 'true' ) {
+        var subject = payload.original_message.attachments[0].fallback.split( "%" )[0]
+        var date = payload.original_message.attachments[0].fallback.split( "%" )[1]
+        var event = {
+            summary: subject,
+            description: subject,
+            start: {
+                dateTime: date + 'T5:00:00-00:01',
+                timeZone: 'America/Los_Angeles'
+            },
+            end: {
+                dateTime: date + 'T23:59:00-00:01',
+                timeZone: 'America/Los_Angeles'
+            },
+            reminders: {
+                'useDefault': false,
+                'overrides': [
+                    { 'method': 'email', 'minutes': 24 * 60 },
+                    { 'method': 'popup', 'minutes': 10 },
+                ],
+            },
+        }
+        var calendar = google.calendar( 'v3' );
+        User.find( { slackId: payload.user.id }, function ( err, user ) {
+            if ( err ) {
+                throw new Error( 'err' )
+            }
+            else {
+                var auth = getGoogleAuth();
+                auth.credentials = user[0].google;
+                calendar.events.insert( {
+                    auth: auth,
+                    calendarId: 'primary',
+                    resource: event,
+                }, function ( err, event ) {
+                    if ( err ) {
+                        console.log( 'There was an error contacting the Calendar service: ' + err );
+                        return;
+                    }
+                    console.log( 'Event created: %s', event.htmlLink );
+                } );
+            }
+        } )
+
+
+        res.send( 'Creating event! :fire: ' );
+    } else {
+        res.send( 'Cancelled :x:' )
     }
-    var calendar = google.calendar('v3');
-    User.find({slackId: payload.user.id}, function(err, user){
-      if(err){
-        throw new Error('err')
-      }
-      else{
-        calendar.events.insert({
-          auth: user.google.access_token,
-          calendarId: 'primary',
-          resource: event,
-        }, function(err, event) {
-          if (err) {
-            console.log('There was an error contacting the Calendar service: ' + err);
-            return;
-          }
-          console.log('Event created: %s', event.htmlLink);
-        });
-      }
-    })
-
-
-    res.send( 'Creating event! :fire: ');
-  } else {
-    res.send( 'Cancelled :x:' )
-  }
-});
+} );
 
 app.listen( 3000 );
