@@ -117,13 +117,23 @@ app.post( '/slack/interactive', ( req, res ) => {
             },
         }
         var calendar = google.calendar( 'v3' );
-        User.find( { slackId: payload.user.id }, function ( err, user ) {
+        User.findOne( { slackId: payload.user.id }, function ( err, user ) {
             if ( err ) {
-                throw new Error( 'err' )
+                throw new Error( err );
             }
             else {
                 var auth = getGoogleAuth();
-                auth.credentials = user[0].google;
+                auth.credentials = user.google;
+                if ( user.google.expiry_date < new Date().getTime() ) {
+                    auth.refreshAccessToken(function( err, tokens ) {
+                        if (err) {
+                            throw new Error( err );
+                        } else {
+                            user.google = tokens;
+                            user.save();
+                        }
+                    })
+                }
                 calendar.events.insert( {
                     auth: auth,
                     calendarId: 'primary',
