@@ -18,7 +18,6 @@ rtm.on( CLIENT_EVENTS.RTM.AUTHENTICATED, ( rtmStartData ) => {
 } );
 
 function checkReminders() {
-  //test plz ignore
     var today = moment().format( "YYYY-MM-DD" );
     console.log( today )
     Reminder.find( { date: today }, function ( err, rems ) {
@@ -34,9 +33,7 @@ function checkReminders() {
         }
     } )
     Reminder.remove( { date: today } );
-
     var tomorrow = moment().add( 'days', 1 ).format( "YYYY-MM-DD" );
-
     Reminder.find( { date: tomorrow }, function ( err, rems ) {
         if ( err ) {
             throw new Error( "err" )
