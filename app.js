@@ -27,8 +27,10 @@ app.get( '/connect', ( req, res ) => {
     if ( !userId ) {
         res.status( 400 ).send( 'Missing user id' );
     } else {
+        console.log('checking for user');
         User.findById( userId )
             .then( function ( user ) {
+                console.log('found user');
                 if ( !user ) {
                     res.status( 404 ).send( 'Cannot find user' );
                 } else { //have a user, ready to connect to google
@@ -55,14 +57,12 @@ app.get( '/oauthcallback', function ( req, res ) {
     var googleAuth = getGoogleAuth();
     googleAuth.getToken( req.query.code, function ( err, tokens ) { //turn code into tokens (google's credentials)
         if ( err ) {
-            console.log( 'error 1' );
             res.status( 500 ).json( { error: err } );
         } else {
             googleAuth.setCredentials( tokens ); //initialize google library with all credentials so it can make requests
             var plus = google.plus( 'v1' );
             plus.people.get( { auth: googleAuth, userId: 'me' }, function ( err, googleUser ) {
                 if ( err ) {
-                    console.log( 'error 2' );
                     res.status( 500 ).json( { error: err } );
                 } else {
                     User.findById( JSON.parse( decodeURIComponent( req.query.state ) ).auth_id )
