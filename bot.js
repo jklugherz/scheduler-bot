@@ -103,18 +103,14 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                             let textArr = tempMsg.split( ' ' );
                             textArr = textArr.map( function ( word ) {
                                 if ( word.includes( '<@' ) ) {
-                                    let email = '';
-                                    axios( 'https://slack.com/api/users.profile.get', {
+                                    return axios( 'https://slack.com/api/users.profile.get', {
                                         token: process.env.SLACK_BOT_TOKEN,
                                         user: word.slice( 2, word.length - 1 )
-                                    } ).then( function ( val ) { email = val.email } )
-                                        .catch( function ( err ) { console.log( 'ERROR', err ) } )
-                                    while ( email.length < 1 ) { }
-                                    return email;
+                                    } ).profile.email
                                 } else { return word }
                             } )
-                            tempMsg = textArr.join( ' ' );
-                            console.log( tempMsg );
+                            tempMsg = textArr.join(' ');
+                            console.log(tempMsg);
                         }
                         axios.get( 'https://api.api.ai/api/query', {
                             params: {
