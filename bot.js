@@ -103,7 +103,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                             let textArr = tempMsg.split( ' ' );
                             textArr = textArr.map( function ( word ) {
                                 if ( word.includes( '<@' ) ) {
-                                    return axios( 'https://slack.com/api/users.profile.get', {
+                                    return await axios( 'https://slack.com/api/users.profile.get', {
                                         token: process.env.SLACK_BOT_TOKEN,
                                         user: word.slice( 2, word.length - 1 )
                                     } ).email
