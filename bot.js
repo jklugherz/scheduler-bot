@@ -18,6 +18,7 @@ rtm.on( CLIENT_EVENTS.RTM.AUTHENTICATED, ( rtmStartData ) => {
 } );
 
 function checkReminders() {
+  //test plz ignore
     var today = moment().format( "YYYY-MM-DD" );
     console.log( today )
     Reminder.find( { date: today }, function ( err, rems ) {
