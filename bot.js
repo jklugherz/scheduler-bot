@@ -98,15 +98,15 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                     }
                     else {
                         let tempMsg = msg.text;
-                        if ( msg.text.includes( '<@' ) ) {
-                            let textArr = msg.text.split( ' ' );
+                        if ( tempMsg.includes( '<@' ) ) {
+                            let textArr = tempMsg.split( ' ' );
                             textArr = textArr.map( function ( word ) {
                                 if ( word.includes( '<@' ) ) {
-                                    return fetch( 'https://slack.com/api/users.profile.get', {
+                                    return axios( 'https://slack.com/api/users.profile.get', {
                                         token: process.env.SLACK_BOT_TOKEN,
                                         user: word.slice( 2, word.length - 1 )
                                     } ).then( function ( user ) {
-                                        return user.first_name + ' ' + user.last_name;
+                                        return user.email;
                                     } )
                                 } else { return word }
                             } )
