@@ -8,6 +8,7 @@ var rtm = new RtmClient( bot_token );
 var moment = require( 'moment' );
 
 let channel;
+var pendingUsers = [];
 
 // The client will emit an RTM.AUTHENTICATED event on successful connection, with the `rtm.start` payload
 rtm.on( CLIENT_EVENTS.RTM.AUTHENTICATED, ( rtmStartData ) => {
@@ -20,7 +21,7 @@ rtm.on( CLIENT_EVENTS.RTM.AUTHENTICATED, ( rtmStartData ) => {
 function checkReminders() {
     //test plz ignore
     var today = moment().format( "YYYY-MM-DD" );
-    console.log( today )
+    //console.log( today )
     Reminder.find( { date: today }, function ( err, rems ) {
         if ( err ) {
             throw new Error( "err" )
