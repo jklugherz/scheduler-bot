@@ -6,7 +6,8 @@ var { rtm } = require( './bot' )
 var google = require( 'googleapis' );
 var googleAuth = require( 'google-auth-library' );
 var OAuth2 = google.auth.OAuth2;
-var { User } = require( './models' );
+var { User, Reminder } = require( './models' );
+var moment = require('moment');
 
 var app = express();
 
@@ -90,6 +91,14 @@ app.post( '/slack/interactive', ( req, res ) => {
     if ( payload.actions[0].value === 'true' ) {
         var subject = payload.original_message.attachments[0].fallback.split( "%" )[0]
         var date = payload.original_message.attachments[0].fallback.split( "%" )[1]
+        var day = moment( date ).format( "YYYY-MM-DD" )
+        var rem = new Reminder( {
+            subject: subject,
+            date: day,
+            userId: payload.original_message.attachments[0].fallback.split( "%" )[2]
+        } )
+       
+        rem.save();
         var event = {
             summary: subject,
             description: subject,

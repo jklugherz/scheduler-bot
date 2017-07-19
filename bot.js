@@ -96,20 +96,13 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                             if ( data.result.actionIncomplete ) {
                                 rtm.sendMessage( data.result.fulfillment.speech, msg.channel );
                             } else {
-                                var day = moment( data.result.parameters.date, "YYYY-MM-DD" )
-                                var rem = new Reminder( {
-                                    subject: data.result.parameters.subject,
-                                    date: day,
-                                    userId: msg.user
-                                } )
-                                console.log(rem.date)
-                                rem.save();
+                                
                                 web.chat.postMessage( msg.channel,
                                     `Creating reminder for '${ data.result.parameters.subject }' on ${ data.result.parameters.date }`,
                                     {
                                         "attachments": [
                                             {
-                                                "fallback": `${ data.result.parameters.subject }%` + `${ data.result.parameters.date }`,
+                                                "fallback": `${ data.result.parameters.subject }%` + `${ data.result.parameters.date }%` + `${msg.user}`,
                                                 "callback_id": "reminder",
                                                 "color": "#3AA3E3",
                                                 "attachment_type": "default",
