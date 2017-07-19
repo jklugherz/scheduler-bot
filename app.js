@@ -2,7 +2,7 @@ var express = require( 'express' );
 var session = require( 'express-session' );
 var path = require( 'path' );
 var bodyParser = require( 'body-parser' );
-var { rtm } = require( './bot' )
+var { rtm, pendingUsers } = require( './bot' )
 var google = require( 'googleapis' );
 var googleAuth = require( 'google-auth-library' );
 var OAuth2 = google.auth.OAuth2;
@@ -86,35 +86,37 @@ app.get( '/', ( req, res ) => {
 
 app.post( '/slack/interactive', ( req, res ) => {
     var payload = JSON.parse( req.body.payload );
+    console.log(payload);
+    var ind = pendingUsers.indexOf(payload.user.id)
+    pendingUsers.splice(ind);
     if ( payload.actions[0].value === 'true' ) {
         var subject = payload.original_message.attachments[0].fallback.split( "%" )[0]
         var date = payload.original_message.attachments[0].fallback.split( "%" )[1]
+        if(payload.original_message.attachments[0].fallback.split( "%" ).length > 2){
+            var time = payload.original_message.attachments[0].fallback.split( "%" )[2]
+            var people = payload.original_message.attachments[0].fallback.split( "%" )[3]
+        }
+        var time = moment( time ).format("HH:mm:ss")
         var day = moment( date ).format( "YYYY-MM-DD" )
-        var rem = new Reminder( {
-            subject: subject,
-            date: day,
-            userId: payload.original_message.attachments[0].fallback.split( "%" )[2]
-        } )
-       
-        rem.save();
+        if(!people){
+            var rem = new Reminder( {
+                subject: subject,
+                date: day,
+                userId: payload.original_message.attachments[0].fallback.split( "%" )[2]
+            } )
+            rem.save();
+        }
         var event = {
-            summary: subject,
-            description: subject,
+            summary: people ? `meeting with ${people}${subject ? (': ' + subject) : ''}` : subject,
+            description: people ? `meeting with ${people}${subject ? (': ' + subject) : ''}` : subject,
             start: {
-                dateTime: date + 'T5:00:00-00:01',
+                dateTime: time ? (date + 'T' + time + '-00:01') : (date + "T5:00:00-00:01"),
                 timeZone: 'America/Los_Angeles'
             },
             end: {
-                dateTime: date + 'T23:59:00-00:01',
+                dateTime: time ? (date + 'T' + time.add(30, 'minutes') + '-00:01') : (date + "T23:59:00-00:01"),
                 timeZone: 'America/Los_Angeles'
-            },
-            reminders: {
-                'useDefault': false,
-                'overrides': [
-                    { 'method': 'email', 'minutes': 24 * 60 },
-                    { 'method': 'popup', 'minutes': 10 },
-                ],
-            },
+            }
         }
         var calendar = google.calendar( 'v3' );
         User.find( { slackId: payload.user.id }, function ( err, user ) {

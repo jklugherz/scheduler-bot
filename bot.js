@@ -8,6 +8,7 @@ var rtm = new RtmClient( bot_token );
 var moment = require('moment');
 
 let channel;
+var pendingUsers = [];
 
 // The client will emit an RTM.AUTHENTICATED event on successful connection, with the `rtm.start` payload
 rtm.on( CLIENT_EVENTS.RTM.AUTHENTICATED, ( rtmStartData ) => {
@@ -22,7 +23,7 @@ rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
     rtm.sendMessage( 'Planner Khaleesi active!', channel );
 
     var today = moment().format("YYYY-MM-DD");
-    console.log(today)
+    //console.log(today)
     //var arr = []
     Reminder.find( { date: today }, function ( err, rems ) {
         if ( err ) {
@@ -80,7 +81,12 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                         Please visit ${process.env.DOMAIN }/connect?user=${ user._id } to setup Google Calendar`
                         , msg.channel );
                 } else {
-                    axios.get( 'https://api.api.ai/api/query', {
+                    if(pendingUsers.includes(user.slackId)){
+                        rtm.sendMessage('You need to confirm or cancel your request', msg.channel)
+                        console.log('rpi')
+                    }
+                    else{
+                       axios.get( 'https://api.api.ai/api/query', {
                         params: {
                             v: 20150910,
                             lang: 'en',
@@ -96,14 +102,16 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                             if ( data.result.actionIncomplete ) {
                                 rtm.sendMessage( data.result.fulfillment.speech, msg.channel );
                             } else {
-                                
+                                pendingUsers.push(user.slackId)
+
+                                var messageString = data.result.parameters.people ? `Creating meeting with '${data.result.parameters.people}' on ${data.result.parameters.date} at ${data.result.parameters.time}: ${data.result.parameters.subject}` : `Creating reminder for '${ data.result.parameters.subject }' on ${ data.result.parameters.date }`
                                 web.chat.postMessage( msg.channel,
-                                    `Creating reminder for '${ data.result.parameters.subject }' on ${ data.result.parameters.date }`,
+                                    messageString,
                                     {
                                         "attachments": [
                                             {
-                                                "fallback": `${ data.result.parameters.subject }%` + `${ data.result.parameters.date }%` + `${msg.user}`,
-                                                "callback_id": "reminder",
+                                                "fallback": data.result.parameters.people ? (`${data.result.parameters.subject}%` + `${data.result.parameters.date}%` + `${data.result.parameters.time}%` + `${data.result.parameters.subject}%`) : (`${ data.result.parameters.subject }%` + `${ data.result.parameters.date }%` + `${msg.user}`),
+                                                "callback_id": data.result.parameters.people ? ("meetings") : ("reminder"),
                                                 "color": "#3AA3E3",
                                                 "attachment_type": "default",
                                                 "actions": [
@@ -125,7 +133,8 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                     }
                                 );
                             }
-                        } );
+                        } ); 
+                    }
                 }
             } ).catch( err => {
                 console.log( 'error', err );
@@ -136,5 +145,6 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
 rtm.start();
 
 module.exports = {
-    rtm
+    rtm, 
+    pendingUsers
 }
