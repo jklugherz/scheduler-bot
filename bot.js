@@ -1,6 +1,6 @@
 var { RtmClient, WebClient, CLIENT_EVENTS, RTM_EVENTS } = require( '@slack/client' );
 var axios = require( 'axios' );
-var { User } = require( './models' );
+var { User, Reminder } = require( './models' );
 
 var bot_token = process.env.SLACK_BOT_TOKEN || '';
 var web = new WebClient( bot_token );
@@ -19,6 +19,37 @@ rtm.on( CLIENT_EVENTS.RTM.AUTHENTICATED, ( rtmStartData ) => {
 // you need to wait for the client to fully connect before you can send messages
 rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
     rtm.sendMessage( 'Planner Khaleesi active!', channel );
+
+    var today = new Date();
+    //var arr = []
+    Reminder.find( { date: today }, function ( err, rems ) {
+        if ( err ) {
+            throw new Error( "err" )
+        }
+        else {
+            rems.forEach( function ( item ) {
+                var dm = rtm.dataStore.getDMByUserId( item.userId );
+                rtm.sendMessage( `you have to ${ item.subject } today`, dm.id );
+            } )
+        }
+        //arr.concat(rems)
+    } )
+    Reminder.remove( { date: today } );
+
+    var tomorrow = new Date();
+    tomorrow.setDate( today.getDate() + 1 );
+
+    Reminder.find( { date: tomorrow }, function ( err, rems ) {
+        if ( err ) {
+            throw new Error( "err" )
+        }
+        rems.forEach( function ( item ) {
+            var dm = rtm.dataStore.getDMByUserId( item.userId );
+            rtm.sendMessage( `you have to ${ item.subject } tomorrow`, dm.id );
+        } )
+        //arr.concat(rems)
+    } )
+
 } );
 
 rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
@@ -64,6 +95,12 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                             if ( data.result.actionIncomplete ) {
                                 rtm.sendMessage( data.result.fulfillment.speech, msg.channel );
                             } else {
+                                var rem = new Reminder( {
+                                    subject: data.result.parameters.subject,
+                                    date: new Date( data.result.parameters.date ),
+                                    userId: msg.user
+                                } )
+                                rem.save();
                                 web.chat.postMessage( msg.channel,
                                     `Creating reminder for '${ data.result.parameters.subject }' on ${ data.result.parameters.date }`,
                                     {

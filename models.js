@@ -21,8 +21,8 @@ var reminderSchema = mongoose.Schema({
   userId: String
 });
 
-User = mongoose.model('User', userSchema);
-Reminder = mongoose.model('Reminder', reminderSchema);
+var User = mongoose.model('User', userSchema);
+var Reminder = mongoose.model('Reminder', reminderSchema);
 
 module.exports = {
     User: User,
