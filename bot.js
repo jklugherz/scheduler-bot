@@ -17,41 +17,44 @@ rtm.on( CLIENT_EVENTS.RTM.AUTHENTICATED, ( rtmStartData ) => {
     console.log( `Logged in as ${ rtmStartData.self.name } of team ${ rtmStartData.team.name }, but not yet connected to a channel` );
 } );
 
+function checkReminders() {
+    var today = moment().format( "YYYY-MM-DD" );
+    console.log( today )
+    Reminder.find( { date: today }, function ( err, rems ) {
+        if ( err ) {
+            throw new Error( "err" )
+        }
+        else {
+            rems.forEach( function ( item ) {
+                var dm = rtm.dataStore.getDMByUserId( item.userId );
+                rtm.sendMessage( `you have to ${ item.subject } today`, dm.id );
+                console.log( 'Message sent to ', dm.id, item.subject )
+            } )
+        }
+    } )
+    Reminder.remove( { date: today } );
+
+    var tomorrow = moment().add( 'days', 1 ).format( "YYYY-MM-DD" );
+
+    Reminder.find( { date: tomorrow }, function ( err, rems ) {
+        if ( err ) {
+            throw new Error( "err" )
+        }
+        rems.forEach( function ( item ) {
+            var dm = rtm.dataStore.getDMByUserId( item.userId );
+            rtm.sendMessage( `you have to ${ item.subject } tomorrow`, dm.id );
+            console.log( 'Message sent to ', dm.id, item.subject )
+        } )
+    } )
+}
+
 // you need to wait for the client to fully connect before you can send messages
 rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
     rtm.sendMessage( 'Planner Khaleesi active!', channel );
-    setInterval( function () {
-        var today = moment().format( "YYYY-MM-DD" );
-        console.log( today )
-        Reminder.find( { date: today }, function ( err, rems ) {
-            if ( err ) {
-                throw new Error( "err" )
-            }
-            else {
-                rems.forEach( function ( item ) {
-                    var dm = rtm.dataStore.getDMByUserId( item.userId );
-                    rtm.sendMessage( `you have to ${ item.subject } today`, dm.id );
-                    console.log( 'Message sent to ', dm.id, item.subject )
-                } )
-            }
-        } )
-        Reminder.remove( { date: today } );
-
-        var tomorrow = moment().add( 'days', 1 ).format( "YYYY-MM-DD" );
-
-        Reminder.find( { date: tomorrow }, function ( err, rems ) {
-            if ( err ) {
-                throw new Error( "err" )
-            }
-            rems.forEach( function ( item ) {
-                var dm = rtm.dataStore.getDMByUserId( item.userId );
-                rtm.sendMessage( `you have to ${ item.subject } tomorrow`, dm.id );
-                console.log( 'Message sent to ', dm.id, item.subject )
-            } )
-        } )
-    }, 43200000 )
-
+    checkReminders();
+    setInterval( checkReminders, 43200000 )
 } );
+
 
 rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
     var dm = rtm.dataStore.getDMByUserId( msg.user );
