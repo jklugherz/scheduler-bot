@@ -33,7 +33,14 @@ function checkReminders() {
             } )
         }
     } )
-    Reminder.remove( { date: today } );
+
+    Reminder.remove( { date: today }, (err) =>{
+      if (err) {
+        console.log('error removing reminders from database', err);
+      } else {
+        console.log('reminders removed from database');
+      }
+    } );
 
     var tomorrow = moment().add( 'days', 1 ).format( "YYYY-MM-DD" );
 
@@ -51,8 +58,11 @@ function checkReminders() {
 
 // you need to wait for the client to fully connect before you can send messages
 rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
-    rtm.sendMessage( 'Planner Khaleesi active!', channel );
+    rtm.sendMessage( 'Tom Bot active!', channel );
+
+
     checkReminders();
+
     setInterval( checkReminders, 43200000 )
 } );
 
