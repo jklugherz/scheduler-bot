@@ -17,7 +17,7 @@ var userSchema = mongoose.Schema({
 
 var reminderSchema = mongoose.Schema({
   subject: String,
-  date: Date, 
+  date: String, 
   userId: String
 });
 

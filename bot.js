@@ -5,6 +5,7 @@ var { User, Reminder } = require( './models' );
 var bot_token = process.env.SLACK_BOT_TOKEN || '';
 var web = new WebClient( bot_token );
 var rtm = new RtmClient( bot_token );
+var moment = require('moment');
 
 let channel;
 
@@ -20,7 +21,8 @@ rtm.on( CLIENT_EVENTS.RTM.AUTHENTICATED, ( rtmStartData ) => {
 rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
     rtm.sendMessage( 'Planner Khaleesi active!', channel );
 
-    var today = new Date();
+    var today = moment().format("YYYY-MM-DD");
+    console.log(today)
     //var arr = []
     Reminder.find( { date: today }, function ( err, rems ) {
         if ( err ) {
@@ -30,15 +32,15 @@ rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
             rems.forEach( function ( item ) {
                 var dm = rtm.dataStore.getDMByUserId( item.userId );
                 rtm.sendMessage( `you have to ${ item.subject } today`, dm.id );
+                console.log( 'Message sent to ', dm.id, item.subject )
             } )
         }
         //arr.concat(rems)
     } )
     Reminder.remove( { date: today } );
 
-    var tomorrow = new Date();
-    tomorrow.setDate( today.getDate() + 1 );
-
+    var tomorrow = moment().add('days', 1).format("YYYY-MM-DD");
+    
     Reminder.find( { date: tomorrow }, function ( err, rems ) {
         if ( err ) {
             throw new Error( "err" )
@@ -46,6 +48,7 @@ rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
         rems.forEach( function ( item ) {
             var dm = rtm.dataStore.getDMByUserId( item.userId );
             rtm.sendMessage( `you have to ${ item.subject } tomorrow`, dm.id );
+            console.log( 'Message sent to ', dm.id, item.subject )
         } )
         //arr.concat(rems)
     } )
@@ -55,7 +58,6 @@ rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
 rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
     var dm = rtm.dataStore.getDMByUserId( msg.user );
     if ( !dm || dm.id !== msg.channel || msg.type !== 'message' ) {
-        console.log( 'message not sent to dm, ignoring' );
         return;
     } else {
         // rtm.sendMessage(msg.text, msg.channel);
@@ -91,15 +93,16 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                         }
                     } )
                         .then(( { data } ) => {
-                            console.log( 'data', data );
                             if ( data.result.actionIncomplete ) {
                                 rtm.sendMessage( data.result.fulfillment.speech, msg.channel );
                             } else {
+                                var day = moment( data.result.parameters.date, "YYYY-MM-DD" )
                                 var rem = new Reminder( {
                                     subject: data.result.parameters.subject,
-                                    date: new Date( data.result.parameters.date ),
+                                    date: day,
                                     userId: msg.user
                                 } )
+                                console.log(rem.date)
                                 rem.save();
                                 web.chat.postMessage( msg.channel,
                                     `Creating reminder for '${ data.result.parameters.subject }' on ${ data.result.parameters.date }`,

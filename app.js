@@ -23,7 +23,6 @@ function getGoogleAuth() {
 
 app.get( '/connect', ( req, res ) => {
     var userId = req.query.user;
-    console.log( 'USERID HERE', userId );
     if ( !userId ) {
         res.status( 400 ).send( 'Missing user id' );
     } else {
@@ -74,7 +73,6 @@ app.get( '/oauthcallback', function ( req, res ) {
                         } )
                         .then( function ( mongoUser ) {
                             res.send( 'You are connected to Google Calendar!' ); //sends to webpage
-                            rtm.sendMessage( 'You are connected to Google Calendar!' ); //sends from bot to user
                         } )
                         .catch( function ( err ) { console.log( 'Server error at /oauthcallback', err ); } );
                 };
@@ -89,7 +87,6 @@ app.get( '/', ( req, res ) => {
 
 app.post( '/slack/interactive', ( req, res ) => {
     var payload = JSON.parse( req.body.payload );
-    console.log( payload );
     if ( payload.actions[0].value === 'true' ) {
         var subject = payload.original_message.attachments[0].fallback.split( "%" )[0]
         var date = payload.original_message.attachments[0].fallback.split( "%" )[1]
