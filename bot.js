@@ -118,6 +118,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                 rtm.sendMessage( data.result.fulfillment.speech, msg.channel );
                             } else {
                                 pendingUsers.push(user.slackId);
+                                //console.log(data.result.parameters.people)
                                 var messageString = data.result.parameters.people ? `Scheduling meeting with ${data.result.parameters.people} on ${data.result.parameters.date} at ${data.result.parameters.time} ${data.result.parameters.subject ? (': ' + data.result.parameters.subject) : ''}` : `Creating reminder for '${data.result.parameters.subject}' on ${data.result.parameters.date}`
                                 web.chat.postMessage( msg.channel,
                                     messageString,

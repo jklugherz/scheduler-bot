@@ -101,14 +101,13 @@ app.post( '/slack/interactive', ( req, res ) => {
             time = payload.original_message.attachments[0].fallback.split( "%" )[3]
             people = payload.original_message.attachments[0].fallback.split( "%" )[4]
         }
-
-        var time30 = "2017-08-02 " + time
-        time30 = moment(time30).add(30, 'minutes').format("HH:mm:ss")
-
-        console.log(time30)
+        if(time){
+            var time30 = "2017-08-02 " + time
+            time30 = moment(time30).add(30, 'minutes').format("HH:mm:ss")
+        }
 
         var day = moment( date ).format( "YYYY-MM-DD" )
-        if(people.length === 0){
+        if(!people){
             var rem = new Reminder( {
                 subject: subject,
                 date: day,
