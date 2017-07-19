@@ -111,6 +111,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                 } else { return word }
                             } )
                             tempMsg = textArr.join(' ');
+                            console.log(tempMsg);
                         }
                         axios.get( 'https://api.api.ai/api/query', {
                             params: {
