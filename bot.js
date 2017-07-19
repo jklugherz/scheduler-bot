@@ -109,9 +109,16 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                     } )
                                 } else { return word }
                             } )
-                            Promise.all(tempMsg);
-                            tempMsg = textArr.join(' ');
-                            console.log(tempMsg);
+                            Promise.all( tempMsg );
+                            textArr = textArr.map( function ( word ) {
+                                if ( typeof word === 'object' ) {
+                                    return word.profile.email
+                                } else {
+                                    return word
+                                }
+                            } )
+                            tempMsg = textArr.join( ' ' );
+                            console.log( tempMsg );
                         }
                         axios.get( 'https://api.api.ai/api/query', {
                             params: {
