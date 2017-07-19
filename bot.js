@@ -5,7 +5,7 @@ var { User, Reminder } = require( './models' );
 var bot_token = process.env.SLACK_BOT_TOKEN || '';
 var web = new WebClient( bot_token );
 var rtm = new RtmClient( bot_token );
-var moment = require('moment');
+var moment = require( 'moment' );
 
 let channel;
 var pendingUsers = [];
@@ -18,13 +18,10 @@ rtm.on( CLIENT_EVENTS.RTM.AUTHENTICATED, ( rtmStartData ) => {
     console.log( `Logged in as ${ rtmStartData.self.name } of team ${ rtmStartData.team.name }, but not yet connected to a channel` );
 } );
 
-// you need to wait for the client to fully connect before you can send messages
-rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
-    rtm.sendMessage( 'Planner Khaleesi active!', channel );
-
-    var today = moment().format("YYYY-MM-DD");
-    //console.log(today)
-    //var arr = []
+function checkReminders() {
+  //test plz ignore
+    var today = moment().format( "YYYY-MM-DD" );
+    console.log( today )
     Reminder.find( { date: today }, function ( err, rems ) {
         if ( err ) {
             throw new Error( "err" )
@@ -36,12 +33,11 @@ rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
                 console.log( 'Message sent to ', dm.id, item.subject )
             } )
         }
-        //arr.concat(rems)
     } )
     Reminder.remove( { date: today } );
 
-    var tomorrow = moment().add('days', 1).format("YYYY-MM-DD");
-    
+    var tomorrow = moment().add( 'days', 1 ).format( "YYYY-MM-DD" );
+
     Reminder.find( { date: tomorrow }, function ( err, rems ) {
         if ( err ) {
             throw new Error( "err" )
@@ -51,10 +47,16 @@ rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
             rtm.sendMessage( `you have to ${ item.subject } tomorrow`, dm.id );
             console.log( 'Message sent to ', dm.id, item.subject )
         } )
-        //arr.concat(rems)
     } )
+}
 
+// you need to wait for the client to fully connect before you can send messages
+rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
+    rtm.sendMessage( 'Planner Khaleesi active!', channel );
+    checkReminders();
+    setInterval( checkReminders, 43200000 )
 } );
+
 
 rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
     var dm = rtm.dataStore.getDMByUserId( msg.user );
@@ -102,16 +104,14 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                             if ( data.result.actionIncomplete ) {
                                 rtm.sendMessage( data.result.fulfillment.speech, msg.channel );
                             } else {
-                                pendingUsers.push(user.slackId)
 
-                                var messageString = data.result.parameters.people ? `Creating meeting with '${data.result.parameters.people}' on ${data.result.parameters.date} at ${data.result.parameters.time}: ${data.result.parameters.subject}` : `Creating reminder for '${ data.result.parameters.subject }' on ${ data.result.parameters.date }`
                                 web.chat.postMessage( msg.channel,
                                     messageString,
                                     {
                                         "attachments": [
                                             {
-                                                "fallback": data.result.parameters.people ? (`${data.result.parameters.subject}%` + `${data.result.parameters.date}%` + `${data.result.parameters.time}%` + `${data.result.parameters.subject}%`) : (`${ data.result.parameters.subject }%` + `${ data.result.parameters.date }%` + `${msg.user}`),
-                                                "callback_id": data.result.parameters.people ? ("meetings") : ("reminder"),
+                                                "fallback": `${ data.result.parameters.subject }%` + `${ data.result.parameters.date }%` + `${ msg.user }`,
+                                                "callback_id": "reminder",
                                                 "color": "#3AA3E3",
                                                 "attachment_type": "default",
                                                 "actions": [
