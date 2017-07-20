@@ -19,7 +19,7 @@ function getGoogleAuth() {
         process.env.OAUTH_CLIENT_ID,
         process.env.OAUTH_SECRET,
         process.env.DOMAIN + '/oauthcallback'
-    );
+        );
 };
 
 app.get( '/connect', ( req, res ) => {
@@ -28,17 +28,17 @@ app.get( '/connect', ( req, res ) => {
         res.status( 400 ).send( 'Missing user id' );
     } else {
         User.findById( userId )
-            .then( function ( user ) {
-                if ( !user ) {
-                    res.status( 404 ).send( 'Cannot find user' );
+        .then( function ( user ) {
+            if ( !user ) {
+                res.status( 404 ).send( 'Cannot find user' );
                 } else { //have a user, ready to connect to google
                     var oauth2Client = getGoogleAuth();
                     var url = oauth2Client.generateAuthUrl( {
                         access_type: 'offline',
                         prompt: 'consent',
                         scope: [
-                            'https://www.googleapis.com/auth/userinfo.profile',
-                            'https://www.googleapis.com/auth/calendar'
+                        'https://www.googleapis.com/auth/userinfo.profile',
+                        'https://www.googleapis.com/auth/calendar'
                         ],
                         state: encodeURIComponent( JSON.stringify( {
                             auth_id: userId
@@ -64,16 +64,16 @@ app.get( '/oauthcallback', function ( req, res ) {
                     res.status( 500 ).json( { error: err } );
                 } else {
                     User.findById( JSON.parse( decodeURIComponent( req.query.state ) ).auth_id )
-                        .then( function ( mongoUser ) {
-                            mongoUser.google = tokens;
-                            mongoUser.google.profile_id = googleUser.id;
-                            mongoUser.google.profile_name = googleUser.displayName;
-                            return mongoUser.save();
-                        } )
-                        .then( function ( mongoUser ) {
+                    .then( function ( mongoUser ) {
+                        mongoUser.google = tokens;
+                        mongoUser.google.profile_id = googleUser.id;
+                        mongoUser.google.profile_name = googleUser.displayName;
+                        return mongoUser.save();
+                    } )
+                    .then( function ( mongoUser ) {
                             res.send( 'You are connected to Google Calendar!' ); //sends to webpage
                         } )
-                        .catch( function ( err ) { console.log( 'Server error at /oauthcallback', err ); } );
+                    .catch( function ( err ) { console.log( 'Server error at /oauthcallback', err ); } );
                 };
             } )
         }
@@ -94,7 +94,7 @@ app.post( '/slack/interactive', ( req, res ) => {
                 throw new Error( err );
             }
             else {
-                console.log( user )
+                //console.log( user )
                 var subject = user.pendingInfo.subject;
                 var date = user.pendingInfo.date;
                 var time = user.pendingInfo.time;
@@ -105,7 +105,7 @@ app.post( '/slack/interactive', ( req, res ) => {
                     time30 = moment( time30 ).add( 30, 'minutes' ).format( "HH:mm:ss" )
                 }
                 var day = moment( date ).format( "YYYY-MM-DD" )
-                if ( !people ) {
+                if ( people.length === 0 ) {
                     var rem = new Reminder( {
                         subject: subject,
                         date: day,
@@ -114,41 +114,50 @@ app.post( '/slack/interactive', ( req, res ) => {
                     rem.save();
                 }
                 var calendar = google.calendar( 'v3' );
-                var calendarIds = [];
+                var busyIntervals = []
+                var timedoesntWork = false;
                 people.forEach( function ( inviteeObj ) {
                     User.findOne( { slackId: inviteeObj.slackId }, function ( err, invitee ) {
                         var auth = getGoogleAuth();
                         auth.credentials = invitee.google;
-                        if ( user.google.expiry_date < new Date().getTime() ) {
+                        if ( invitee.google.expiry_date < new Date().getTime() ) {
                             auth.refreshAccessToken( function ( err, tokens ) {
                                 if ( err ) {
                                     throw new Error( err );
                                 } else {
-                                    user.google = tokens;
-                                    user.save();
+                                    invitee.google = tokens;
+                                    invitee.save();
                                 }
                             } )
                         }
-                        console.log( date, time );
-                        calendar.calendars.get( {
+                        //var weekLater = moment(date).add(7, 'days').format("YYYY-MM-DD")
+                        //console.log("datetime", date + 'T' + "05:00:00" + '-00:01')
+                        calendar.freebusy.query({
                             auth: auth,
-                            calendarId: 'primary',
-                        }, function ( err, response ) {
-                            if ( err ) {
-                                console.log( 'The API returned an error: ' + err );
-                                return;
-                            } else {
-                                calendarIds.push( response.id );
+                            resource: {
+                                timeMin: date + 'T' + time + '-00:01', 
+                                timeMax: date + 'T' + time30 + '-00:01',
+                                timeZone: 'America/Los_Angeles',
+                                items: [{id: inviteeObj.email}]
+                            } 
+                        }, function(err, response){
+                            if(err){
+                                throw new Error(err);
                             }
-
-                        } );
+                            if(response.calendars[inviteeObj.email].busy.length !== 0){
+                                timedoesntWork = true;
+                            }
+                            //busyIntervals.push(response.calendars[inviteeObj.email].busy)
+                        //console.log("freeBusy response", response.calendars['jklugher@wellesley.edu'].busy)
+                        })
                     } )
-                } )
-                console.log(calendarIds);
+                })
+
+                console.log("busy intervals", busyIntervals)
 
                 var event = {
-                    summary: people ? `meeting with ${ people }${ subject ? ( ': ' + subject ) : '' }` : subject,
-                    description: people ? `meeting with ${ people }${ subject ? ( ': ' + subject ) : '' }` : subject,
+                    summary: people.length === 0 ? `meeting with ${ people }${ subject ? ( ': ' + subject ) : '' }` : subject,
+                    description: people.length === 0 ? `meeting with ${ people }${ subject ? ( ': ' + subject ) : '' }` : subject,
                     start: {
                         dateTime: time ? ( date + 'T' + time + '-00:01' ) : ( date + "T5:00:00-00:01" ),
                         timeZone: 'America/Los_Angeles'
@@ -171,6 +180,7 @@ app.post( '/slack/interactive', ( req, res ) => {
                         }
                     } )
                 }
+
                 calendar.events.insert( {
                     auth: auth,
                     calendarId: 'primary',
@@ -186,10 +196,10 @@ app.post( '/slack/interactive', ( req, res ) => {
             user.pendingInfo = {}
             user.save()
         } )
-        res.send( 'Creating event! :fire: ' );
-    } else {
-        res.send( 'Cancelled :x:' )
-    }
+res.send( 'Creating event! :fire: ' );
+} else {
+    res.send( 'Cancelled :x:' )
+}
 } );
 
 var port = process.env.PORT || 3000;
