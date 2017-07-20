@@ -12,12 +12,13 @@ var userSchema = mongoose.Schema({
     type: String,
     required: true
   },
-  google: {}
+  google: {},
+  pendingInfo: {}
 });
 
 var reminderSchema = mongoose.Schema({
   subject: String,
-  date: String, 
+  date: String,
   userId: String
 });
 
