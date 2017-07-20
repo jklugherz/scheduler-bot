@@ -61,8 +61,11 @@ function checkReminders() {
 
 // you need to wait for the client to fully connect before you can send messages
 rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
-    rtm.sendMessage( 'Planner Khaleesi active!', channel );
+    rtm.sendMessage( 'Tom Bot active!', channel );
+
+
     checkReminders();
+
     setInterval( checkReminders, 43200000 )
 } );
 
@@ -133,6 +136,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                     } else {
                                       type = 'reminder'
                                     };
+
                                     var pendingInfo =  {
                                       people: invitees,
                                       date: data.result.parameters.date,
@@ -140,6 +144,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                       subject: data.result.parameters.subject,
                                       type: type
                                     }
+                                    console.log(pendingInfo.people);
                                     //update user to include pending info
                                     user.pendingInfo = pendingInfo;
                                     user.save();

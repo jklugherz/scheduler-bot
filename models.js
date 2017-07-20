@@ -12,7 +12,8 @@ var userSchema = mongoose.Schema({
     type: String,
     required: true
   },
-  google: {}
+  google: {},
+  pendingInfo: {}
 });
 
 var reminderSchema = mongoose.Schema({
