@@ -94,7 +94,8 @@ app.post( '/slack/interactive', ( req, res ) => {
           throw new Error( err );
         }
         else {
-          console.log(user)
+          console.log(user.pendingInfo);
+
           var subject = user.pendingInfo.subject;
           var date = user.pendingInfo.date;
           var time = user.pendingInfo.time;
@@ -137,7 +138,7 @@ app.post( '/slack/interactive', ( req, res ) => {
                               user.save();
                           }
                       })
-                  }
+                  };
                   calendar.events.insert( {
                       auth: auth,
                       calendarId: 'primary',

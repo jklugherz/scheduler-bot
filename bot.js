@@ -120,7 +120,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                             headers: {
                                 Authorization: `Bearer ${ process.env.API_AI_TOKEN }`
                             }
-                        } );
+                        } )
                             .then(( { data } ) => {
                                 if ( data.result.actionIncomplete ) {
                                     rtm.sendMessage( data.result.fulfillment.speech, msg.channel );
