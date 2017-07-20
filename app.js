@@ -193,8 +193,8 @@ app.post( '/slack/interactive', ( req, res ) => {
                         calendar.freebusy.query({
                             auth: auth,
                             resource: {
-                                timeMin: date + 'T' + time + '-00:01',
-                                timeMax: date + 'T' + time30 + '-00:01',
+                                timeMin: date + 'T' + time + '-07:00',
+                                timeMax: date + 'T' + time30 + '-07:00',
                                 timeZone: 'America/Los_Angeles',
                                 items: [{id: inviteeObj.email}]
                             }
@@ -227,8 +227,8 @@ app.post( '/slack/interactive', ( req, res ) => {
                                         calendar.freebusy.query({
                                             auth: auth,
                                             resource: {
-                                                timeMin: date + 'T' + "05:00:00" + '-00:01',
-                                                timeMax: weekLater + 'T' + "23:59:59" + '-00:01',
+                                                timeMin: date + 'T' + "05:00:00" + '-07:00',
+                                                timeMax: weekLater + 'T' + "23:59:59" + '-07:00',
                                                 timeZone: 'America/Los_Angeles',
                                                 items: [{id: inviteeObj.email}]
                                             }
@@ -265,10 +265,12 @@ app.post( '/slack/interactive', ( req, res ) => {
                     summary: people.length === 0 ? `meeting with ${ people }${ subject ? ( ': ' + subject ) : '' }` : subject,
                     description: people.length === 0 ? `meeting with ${ people }${ subject ? ( ': ' + subject ) : '' }` : subject,
                     start: {
-                      dateTime: time ? ( date + 'T' + time + '-00:01' ) : ( date + "T5:00:00-00:01" )
+                      dateTime: time ? ( date + 'T' + time + '-07:00' ) : ( date + "T5:00:00-07:00" ),
+                      timeZone: "Europe/Paris"
                     },
                     end: {
-                      dateTime: time ? ( date + 'T' + time30 + '-00:01' ) : ( date + "T23:59:00-00:01" )
+                      dateTime: time ? ( date + 'T' + time30 + '-07:00' ) : ( date + "T23:59:00-07:00" ),
+                      timeZone: "Europe/Paris"
                     },
                     attendees: emailArr
                   }
