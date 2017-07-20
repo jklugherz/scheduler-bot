@@ -103,8 +103,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                             textArr = textArr.map( function ( word ) {
                                 if ( word.includes( '<@' ) ) {
                                     const u = rtm.dataStore.getUserById(word.slice( 2, word.length - 1 ));
-                                    console.log(u);
-                                    return u;
+                                    return u.profile.real_name;
                                 } else { return word }
                             } )
                             tempMsg = textArr.join( ' ' );
