@@ -33,9 +33,8 @@ function checkReminders() {
                     console.log( 'Message sent to ', dm.id, item.subject )
                 } )
             }
-
         }
-    } )
+    } );
     Reminder.remove( { date: today }, function ( err ) {
         if ( err ) {
             console.log( 'err', err );
@@ -46,7 +45,6 @@ function checkReminders() {
     } );
 
     var tomorrow = moment().add( 'days', 1 ).format( "YYYY-MM-DD" );
-
     Reminder.find( { date: tomorrow }, function ( err, rems ) {
         if ( err ) {
             throw new Error( "err" )
@@ -59,7 +57,7 @@ function checkReminders() {
             } )
         }
     } )
-}
+};
 
 // you need to wait for the client to fully connect before you can send messages
 rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
@@ -106,11 +104,11 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                     const u = rtm.dataStore.getUserById(word.slice( 2, word.length - 1 ));
                                     invitees.push({email: u.profile.email, slackId: word.slice( 2, word.length - 1 )});
                                     return u.profile.real_name;
-                                } else { return word }
-                            } )
+                                } else { return word };
+                            } );
                             tempMsg = textArr.join( ' ' );
                             console.log( tempMsg );
-                        }
+                        };
                         axios.get( 'https://api.api.ai/api/query', {
                             params: {
                                 v: 20150910,
@@ -122,7 +120,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                             headers: {
                                 Authorization: `Bearer ${ process.env.API_AI_TOKEN }`
                             }
-                        } )
+                        } );
                             .then(( { data } ) => {
                                 if ( data.result.actionIncomplete ) {
                                     rtm.sendMessage( data.result.fulfillment.speech, msg.channel );
