@@ -69,6 +69,14 @@ rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
     setInterval( checkReminders, 43200000 )
 } );
 
+function userFinder( word ) {
+    const res = axios.post( 'https://slack.com/api/users.profile.get', {
+        token: process.env.SLACK_BOT_TOKEN,
+        user: word.slice( 2, word.length - 1 )
+    } )
+    console.log(res);
+    return res;
+}
 
 rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
     var dm = rtm.dataStore.getDMByUserId( msg.user );
@@ -103,19 +111,8 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                             let textArr = tempMsg.split( ' ' );
                             textArr = textArr.map( function ( word ) {
                                 if ( word.includes( '<@' ) ) {
-                                    return axios.post( 'https://slack.com/api/users.profile.get', {
-                                        token: process.env.SLACK_BOT_TOKEN,
-                                        user: word.slice( 2, word.length - 1 )
-                                    } )
+                                    return userFinder(word);
                                 } else { return word }
-                            } )
-                            Promise.all( tempMsg );
-                            textArr = textArr.map( function ( word ) {
-                                if ( typeof word === 'object' ) {
-                                    return word.profile.email
-                                } else {
-                                    return word
-                                }
                             } )
                             tempMsg = textArr.join( ' ' );
                             console.log( tempMsg );
