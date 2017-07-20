@@ -189,5 +189,6 @@ rtm.start();
 
 module.exports = {
     rtm,
-    pendingUsers
+    pendingUsers,
+    web
 }
