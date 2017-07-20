@@ -86,79 +86,71 @@ app.get( '/', ( req, res ) => {
 
 app.post( '/slack/interactive', ( req, res ) => {
     var payload = JSON.parse( req.body.payload );
-    //console.log(payload);
     var ind = pendingUsers.indexOf(payload.user.id)
-    let people;
-    let time;
     pendingUsers.splice(ind);
     if ( payload.actions[0].value === 'true' ) {
-        console.log("fallback", payload.original_message.attachments[0].fallback);
-        console.log("fallbackSplit", payload.original_message.attachments[0].fallback.split("%"));
+      User.findOne( { slackId: payload.user.id }, function ( err, user ) {
+        if ( err ) {
+          throw new Error( err );
+        }
+        else {
+          console.log(user)
+          var subject = user.pendingInfo.subject;
+          var date = user.pendingInfo.date;
+          var time = user.pendingInfo.time;
+          var people = user.pendingInfo.people;
 
-        var subject = payload.original_message.attachments[0].fallback.split( "%" )[0]
-        var date = payload.original_message.attachments[0].fallback.split( "%" )[1]
-        if(payload.original_message.attachments[0].fallback.split( "%" ).length > 3){
-            time = payload.original_message.attachments[0].fallback.split( "%" )[3]
-            people = payload.original_message.attachments[0].fallback.split( "%" )[4]
-        }
-        if(time){
-            var time30 = "2017-08-02 " + time
-            time30 = moment(time30).add(30, 'minutes').format("HH:mm:ss")
-        }
-
-        var day = moment( date ).format( "YYYY-MM-DD" )
-        if(!people){
-            var rem = new Reminder( {
-                subject: subject,
-                date: day,
-                userId: payload.original_message.attachments[0].fallback.split( "%" )[2]
-            } )
-            rem.save();
-        }
-        var event = {
-            summary: people ? `meeting with ${people}${subject.length === 0 ? (': ' + subject) : ''}` : subject,
-            description: people ? `meeting with ${people}${subject.length === 0 ? (': ' + subject) : ''}` : subject,
-            start: {
-                dateTime: time ? (date + 'T' + time + '-00:01') : (date + "T5:00:00-00:01"),
-                timeZone: 'America/Los_Angeles'
-            },
-            end: {
-                dateTime: time ? (date + 'T' + time30 + '-00:01') : (date + "T23:59:00-00:01"),
-                timeZone: 'America/Los_Angeles'
-            }
-        }
-        var calendar = google.calendar( 'v3' );
-        User.findOne( { slackId: payload.user.id }, function ( err, user ) {
-            if ( err ) {
-                throw new Error( err );
-            }
-            else {
-                var auth = getGoogleAuth();
-                auth.credentials = user.google;
-                if ( user.google.expiry_date < new Date().getTime() ) {
-                    auth.refreshAccessToken(function( err, tokens ) {
-                        if (err) {
-                            throw new Error( err );
-                        } else {
-                            user.google = tokens;
-                            user.save();
-                        }
-                    })
-                }
-                calendar.events.insert( {
-                    auth: auth,
-                    calendarId: 'primary',
-                    resource: event,
-                }, function ( err, event ) {
-                    if ( err ) {
-                        console.log( 'There was an error contacting the Calendar service: ' + err );
-                        return;
-                    }
-                    console.log( 'Event created: %s', event.htmlLink );
-                } );
+          if(time){
+              var time30 = "2017-08-02 " + time
+              time30 = moment(time30).add(30, 'minutes').format("HH:mm:ss")
+          }
+          var day = moment( date ).format( "YYYY-MM-DD" )
+          if(!people){
+              var rem = new Reminder( {
+                  subject: subject,
+                  date: day,
+                  userId: user.slackId
+              } )
+              rem.save();
+          }
+          var event = {
+              summary: people ? `meeting with ${people}${subject ? (': ' + subject) : ''}` : subject,
+              description: people ? `meeting with ${people}${subject ? (': ' + subject) : ''}` : subject,
+              start: {
+                  dateTime: time ? (date + 'T' + time + '-00:01') : (date + "T5:00:00-00:01"),
+                  timeZone: 'America/Los_Angeles'
+              },
+              end: {
+                  dateTime: time ? (date + 'T' + time30 + '-00:01') : (date + "T23:59:00-00:01"),
+                  timeZone: 'America/Los_Angeles'
+              }
+          }
+          var calendar = google.calendar( 'v3' );
+                  var auth = getGoogleAuth();
+                  auth.credentials = user.google;
+                  if ( user.google.expiry_date < new Date().getTime() ) {
+                      auth.refreshAccessToken(function( err, tokens ) {
+                          if (err) {
+                              throw new Error( err );
+                          } else {
+                              user.google = tokens;
+                              user.save();
+                          }
+                      })
+                  }
+                  calendar.events.insert( {
+                      auth: auth,
+                      calendarId: 'primary',
+                      resource: event,
+                  }, function ( err, event ) {
+                      if ( err ) {
+                          console.log( 'There was an error contacting the Calendar service: ' + err );
+                          return;
+                      }
+                      console.log( 'Event created: %s', event.htmlLink );
+                  } );
             }
         } )
-
 
         res.send( 'Creating event! :fire: ' );
     } else {

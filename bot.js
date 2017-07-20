@@ -46,6 +46,7 @@ function checkReminders() {
     } );
 
     var tomorrow = moment().add( 'days', 1 ).format( "YYYY-MM-DD" );
+
     Reminder.find( { date: tomorrow }, function ( err, rems ) {
         if ( err ) {
             throw new Error( "err" )
@@ -77,7 +78,8 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                 if ( !user ) {
                     return new User( {
                         slackId: msg.user,
-                        slackDmId: msg.channel
+                        slackDmId: msg.channel,
+                        pendingInfo: {}
                     } ).save();
                 }
                 return user;
@@ -95,12 +97,14 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                         rtm.sendMessage( 'You need to confirm or cancel your request', msg.channel )
                     }
                     else {
+                        var invitees = [];
                         let tempMsg = msg.text;
                         if ( tempMsg.includes( '<@' ) ) {
                             let textArr = tempMsg.split( ' ' );
                             textArr = textArr.map( function ( word ) {
                                 if ( word.includes( '<@' ) ) {
                                     const u = rtm.dataStore.getUserById(word.slice( 2, word.length - 1 ));
+                                    invitees.push({email: u.profile.email, slackId: word.slice( 2, word.length - 1 )});
                                     return u.profile.real_name;
                                 } else { return word }
                             } )
@@ -125,12 +129,28 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                 } else {
                                     pendingUsers.push( user.slackId );
                                     var messageString = data.result.parameters.people ? `Scheduling meeting with ${ data.result.parameters.people } on ${ data.result.parameters.date } at ${ data.result.parameters.time } ${ data.result.parameters.subject ? ( ': ' + data.result.parameters.subject ) : '' }` : `Creating reminder for '${ data.result.parameters.subject }' on ${ data.result.parameters.date }`
+                                    let type;
+                                    if (data.result.parameters.people) {
+                                      type = 'meeting'
+                                    } else {
+                                      type = 'reminder'
+                                    };
+                                    var pendingInfo =  {
+                                      people: invitees,
+                                      date: data.result.parameters.date,
+                                      time: data.result.parameters.time,
+                                      subject: data.result.parameters.subject,
+                                      type: type
+                                    }
+                                    //update user to include pending info
+                                    user.pendingInfo = pendingInfo;
+                                    user.save();
                                     web.chat.postMessage( msg.channel,
                                         messageString,
                                         {
                                             "attachments": [
                                                 {
-                                                    "fallback": data.result.parameters.people ? ( `${ data.result.parameters.subject ? ( data.result.parameters.subject ) : '' }%` + `${ data.result.parameters.date }%` + `${ msg.user }%` + `${ data.result.parameters.time }%` + `${ data.result.parameters.people }%` ) : ( `${ data.result.parameters.subject }%` + `${ data.result.parameters.date }%` + `${ msg.user }` ),
+                                                    "fallback": 'fallback',
                                                     "callback_id": "reminder",
                                                     "color": "#3AA3E3",
                                                     "attachment_type": "default",
