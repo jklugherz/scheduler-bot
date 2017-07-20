@@ -119,7 +119,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                             headers: {
                                 Authorization: `Bearer ${ process.env.API_AI_TOKEN }`
                             }
-                        } );
+                        } )
                             .then(( { data } ) => {
                                 if ( data.result.actionIncomplete ) {
                                     rtm.sendMessage( data.result.fulfillment.speech, msg.channel );
@@ -132,6 +132,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                     } else {
                                       type = 'reminder'
                                     };
+
                                     var pendingInfo =  {
                                       people: invitees,
                                       date: data.result.parameters.date,
@@ -139,6 +140,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                       subject: data.result.parameters.subject,
                                       type: type
                                     }
+                                    console.log(pendingInfo.people);
                                     //update user to include pending info
                                     user.pendingInfo = pendingInfo;
                                     user.save();
