@@ -94,35 +94,45 @@ app.post( '/slack/interactive', ( req, res ) => {
         }
         else {
             //console.log( user )
-            var subject = user.pendingInfo.subject;
+            // var subject = user.pendingInfo.subject;
             var time = payload.actions[0].selected_options.value;
             var people = user.pendingInfo.people;
-            var emails = user.pendingInfo.email;
+            var time30 =  moment.utc(moment( time ).add( 30, 'minutes' ))
 
-            if ( time ) {
-                var time30 = "2017-08-02 " + time
-                time30 = moment( time30 ).add( 30, 'minutes' ).format( "HH:mm:ss" )
-            }
             var day = moment( date ).format( "YYYY-MM-DD" )
 
             var calendar = google.calendar( 'v3' );
 
-            var timedoesntWork = false;
-
+            var emailArr = people.map(function(obj){
+              return {email: obj.email}
+            });
             var event = {
               summary: people.length === 0 ? `meeting with ${ people }${ subject ? ( ': ' + subject ) : '' }` : subject,
               description: people.length === 0 ? `meeting with ${ people }${ subject ? ( ': ' + subject ) : '' }` : subject,
               start: {
-                dateTime: time ? ( date + 'T' + time + '-00:01' ) : ( date + "T5:00:00-00:01" ),
-                timeZone: 'America/Los_Angeles'
+                dateTime: payload.actions[0].selected_options.value,
+                timeZone: "Europe/Paris"
               },
               end: {
-                dateTime: time ? ( date + 'T' + time30 + '-00:01' ) : ( date + "T23:59:00-00:01" ),
-                timeZone: 'America/Los_Angeles'
-              }
+                dateTime: time30
+                timeZone: "Europe/Paris"
+              },
+              attendees: emailArr
             }
+            // console.log('event start time', event.start.dateTime);
             var auth = getGoogleAuth();
             auth.credentials = user.google;
+            if ( user.google.expiry_date < new Date().getTime() ) {
+              auth.refreshAccessToken( function ( err, tokens ) {
+                if ( err ) {
+                  throw new Error( err );
+                } else {
+                  user.google = tokens;
+                  user.save();
+                }
+              } )
+            }
+
             calendar.events.insert( {
               auth: auth,
               calendarId: 'primary',
@@ -142,6 +152,7 @@ app.post( '/slack/interactive', ( req, res ) => {
   } else {
     var payload = JSON.parse( req.body.payload );
     var ind = pendingUsers.indexOf( payload.user.id )
+    console.log('payload', payload)
     pendingUsers.splice( ind );
     if ( payload.actions[0].value === 'true' ) {
         User.findOne( { slackId: payload.user.id }, function ( err, user ) {
@@ -153,7 +164,7 @@ app.post( '/slack/interactive', ( req, res ) => {
                 var date = user.pendingInfo.date;
                 var time = user.pendingInfo.time;
                 var people = user.pendingInfo.people;
-                // console.log('pendingInfo', user.pendingInfo);
+                console.log('pendingInfo', user.pendingInfo);
 
                 if ( time ) {
                     var time30 = "2017-08-02 " + time
@@ -243,7 +254,7 @@ app.post( '/slack/interactive', ( req, res ) => {
                                             if (index2 === people.length - 1) {
                                               //****-------ALGORITHM GOES HERE ---------*****
 
-                                              
+
                                               web.chat.postMessage( payload.channel.id, 'Oh No! There is a conflict! :(', conflictMenuTest);
                                               res.end();
                                               //busyIntervals.push(response.calendars[inviteeObj.email].busy)
@@ -331,16 +342,16 @@ var conflictMenuTest = {
                 "type": "select",
                 "options": [
                     {
-                        "text": `test`,
-                        "value": `test`
+                        "text": `9:00`,
+                        "value": `2017-07-21T09:00:00-07:00`
                     },
                     {
-                        "text": `test`,
-                        "value": `test`
+                        "text": `10:00`,
+                        "value": `2017-07-21T10:00:00-07:00`
                     },
                     {
-                        "text": `test`,
-                        "value": `test`
+                        "text": `12:00`,
+                        "value": `2017-07-21T12:00:00-07:00`
                     }
                 ]
             }
