@@ -7,7 +7,7 @@ var google = require( 'googleapis' );
 var googleAuth = require( 'google-auth-library' );
 var OAuth2 = google.auth.OAuth2;
 var { User, Reminder } = require( './models' );
-var moment = require( 'moment' );
+var moment = require('moment');
 
 var app = express();
 
@@ -153,7 +153,7 @@ app.post( '/slack/interactive', ( req, res ) => {
                 var date = user.pendingInfo.date;
                 var time = user.pendingInfo.time;
                 var people = user.pendingInfo.people;
-                console.log('pendingInfo', user.pendingInfo);
+                // console.log('pendingInfo', user.pendingInfo);
 
                 if ( time ) {
                     var time30 = "2017-08-02 " + time
@@ -173,9 +173,9 @@ app.post( '/slack/interactive', ( req, res ) => {
                 var hasConflicts = false;
                 people.forEach( function ( inviteeObj, idx ) {
                   console.log('in loop to see if time not work');
-                  console.log('invitee object in for each loop', inviteeObj);
+                  // console.log('invitee object in for each loop', inviteeObj);
                     User.findOne( { slackId: inviteeObj.slackId }, function ( err, invitee ) {
-                      console.log('invitee object found in db', invitee);
+                      // console.log('invitee object found in db', invitee);
                         var auth = getGoogleAuth();
                         auth.credentials = invitee.google;
                         if ( invitee.google.expiry_date < new Date().getTime() ) {
@@ -202,13 +202,14 @@ app.post( '/slack/interactive', ( req, res ) => {
                             if(err){
                                 throw new Error(err);
                             }
-                            // console.log("busy obj", response.calendars[inviteeObj.email].busy)
+                            console.log("busy obj", response.calendars[inviteeObj.email].busy)
+                            console.log('calendar', response.calendars[inviteeObj.email]);
                             if(response.calendars[inviteeObj.email].busy.length !== 0){
                                 hasConflicts = true;
-                                // console.log('calendar', response.calendars[inviteeObj.email]);
+
                                 // console.log("i'm here in the if statement");
                                 busyIntervals = []
-                                people.forEach( function ( inviteeObj ) {
+                                people.forEach( function ( inviteeObj, index2 ) {
                                     User.findOne( { slackId: inviteeObj.slackId }, function ( err, invitee ) {
                                         var auth = getGoogleAuth();
                                         auth.credentials = invitee.google;
@@ -239,13 +240,21 @@ app.post( '/slack/interactive', ( req, res ) => {
                                             if(response.calendars[inviteeObj.email].busy.length !== 0){
                                                 busyIntervals = busyIntervals.concat(response.calendars[inviteeObj.email].busy);
                                             }
-                                            //busyIntervals.push(response.calendars[inviteeObj.email].busy)
-                                        //console.log("freeBusy response", response.calendars['jklugher@wellesley.edu'].busy)
+                                            if (index2 === people.length - 1) {
+                                              //****-------ALGORITHM GOES HERE ---------*****
+
+                                              
+                                              web.chat.postMessage( payload.channel.id, 'Oh No! There is a conflict! :(', conflictMenuTest);
+                                              res.end();
+                                              //busyIntervals.push(response.calendars[inviteeObj.email].busy)
+                                              //console.log("freeBusy response", response.calendars['jklugher@wellesley.edu'].busy)
+                                              console.log('busy intervals', busyIntervals);
+
+                                            }
                                         })
                                     } )
                                 })
-                                web.chat.postMessage( payload.channel.id, 'Oh No! There is a conflict! :(', conflictMenuTest);
-                                res.end();
+
                             } else if (!hasConflicts && idx === people.length - 1) {
                               var emailArr = people.map(function(obj){
                                 return {email: obj.email}
