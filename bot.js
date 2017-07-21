@@ -20,7 +20,6 @@ rtm.on( CLIENT_EVENTS.RTM.AUTHENTICATED, ( rtmStartData ) => {
 
 function checkReminders() {
     var today = moment().format( "YYYY-MM-DD" );
-    //console.log( today )
     Reminder.find( { date: today }, function ( err, rems ) {
         if ( err ) {
             throw new Error( "err" )
@@ -61,8 +60,11 @@ function checkReminders() {
 
 // you need to wait for the client to fully connect before you can send messages
 rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
-    rtm.sendMessage( 'Planner Khaleesi active!', channel );
+    rtm.sendMessage( 'Tom Bot active!', channel );
+
+
     checkReminders();
+
     setInterval( checkReminders, 43200000 )
 } );
 
@@ -186,5 +188,6 @@ rtm.start();
 
 module.exports = {
     rtm,
-    pendingUsers
+    pendingUsers,
+    web
 }
