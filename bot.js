@@ -60,7 +60,7 @@ function checkReminders() {
 
 // you need to wait for the client to fully connect before you can send messages
 rtm.on( CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function () {
-    rtm.sendMessage( 'Tom Bot active!', channel );
+    // rtm.sendMessage( 'Tom Bot active!', channel );
 
 
     checkReminders();
@@ -109,7 +109,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                 } else { return word };
                             } );
                             tempMsg = textArr.join( ' ' );
-                            console.log( tempMsg );
+                            // console.log( tempMsg );
                         };
                         axios.get( 'https://api.api.ai/api/query', {
                             params: {
@@ -143,7 +143,7 @@ rtm.on( RTM_EVENTS.MESSAGE, ( msg ) => {
                                       subject: data.result.parameters.subject,
                                       type: type
                                     }
-                                    console.log(pendingInfo.people);
+                                    // console.log(pendingInfo.people);
                                     //update user to include pending info
                                     user.pendingInfo = pendingInfo;
                                     user.save();
