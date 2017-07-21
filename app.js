@@ -202,7 +202,7 @@ app.post( '/slack/interactive', ( req, res ) => {
                             if(err){
                                 throw new Error(err);
                             }
-                            // console.log("busy obj", response.calendars[inviteeObj.email].busy)
+                            console.log("busy obj", response.calendars[inviteeObj.email].busy)
                             if(response.calendars[inviteeObj.email].busy.length !== 0){
                                 hasConflicts = true;
                                 // console.log('calendar', response.calendars[inviteeObj.email]);
