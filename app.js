@@ -170,8 +170,8 @@ app.post( '/slack/interactive', ( req, res ) => {
                 }
                 var calendar = google.calendar( 'v3' );
 
-                var timedoesntWork = false;
-                people.forEach( function ( inviteeObj ) {
+                var hasConflicts = false;
+                people.forEach( function ( inviteeObj, idx ) {
                   console.log('in loop to see if time not work');
                   console.log('invitee object in for each loop', inviteeObj);
                     User.findOne( { slackId: inviteeObj.slackId }, function ( err, invitee ) {
@@ -202,11 +202,11 @@ app.post( '/slack/interactive', ( req, res ) => {
                             if(err){
                                 throw new Error(err);
                             }
-                            console.log("busy obj", response.calendars[inviteeObj.email].busy)
+                            // console.log("busy obj", response.calendars[inviteeObj.email].busy)
                             if(response.calendars[inviteeObj.email].busy.length !== 0){
-                                timedoesntWork = true;
-                                console.log('calendar', response.calendars[inviteeObj.email]);
-                                console.log("i'm here in the if statement");
+                                hasConflicts = true;
+                                // console.log('calendar', response.calendars[inviteeObj.email]);
+                                // console.log("i'm here in the if statement");
                                 busyIntervals = []
                                 people.forEach( function ( inviteeObj ) {
                                     User.findOne( { slackId: inviteeObj.slackId }, function ( err, invitee ) {
@@ -246,63 +246,57 @@ app.post( '/slack/interactive', ( req, res ) => {
                                 })
                                 web.chat.postMessage( payload.channel.id, 'Oh No! There is a conflict! :(', conflictMenuTest);
                                 res.end();
+                            } else if (!hasConflicts && idx === people.length - 1) {
+                              var emailArr = people.map(function(obj){
+                                return {email: obj.email}
+                              });
+                              var event = {
+                                summary: people.length === 0 ? `meeting with ${ people }${ subject ? ( ': ' + subject ) : '' }` : subject,
+                                description: people.length === 0 ? `meeting with ${ people }${ subject ? ( ': ' + subject ) : '' }` : subject,
+                                start: {
+                                  dateTime: time ? ( date + 'T' + time + '-07:00' ) : ( date + "T5:00:00-07:00" ),
+                                  timeZone: "Europe/Paris"
+                                },
+                                end: {
+                                  dateTime: time ? ( date + 'T' + time30 + '-07:00' ) : ( date + "T23:59:00-07:00" ),
+                                  timeZone: "Europe/Paris"
+                                },
+                                attendees: emailArr
+                              }
+                              // console.log('event start time', event.start.dateTime);
+                              var auth = getGoogleAuth();
+                              auth.credentials = user.google;
+                              if ( user.google.expiry_date < new Date().getTime() ) {
+                                auth.refreshAccessToken( function ( err, tokens ) {
+                                  if ( err ) {
+                                    throw new Error( err );
+                                  } else {
+                                    user.google = tokens;
+                                    user.save();
+                                  }
+                                } )
+                              }
+
+                              calendar.events.insert( {
+                                auth: auth,
+                                calendarId: 'primary',
+                                resource: event,
+                              }, function ( err, event ) {
+                                if ( err ) {
+                                  console.log( 'There was an error contacting the Calendar service: ' + err );
+                                  return;
+                                }
+                                console.log( 'Event created: %s', event.htmlLink );
+                              } );
+                              user.pendingInfo = {}
+                              user.save()
+                              res.send( 'Creating event! :fire: ' );
                             }
                             //busyIntervals.push(response.calendars[inviteeObj.email].busy)
                         //console.log("freeBusy response", response.calendars['jklugher@wellesley.edu'].busy)
                         })
                     } )
                 })
-
-
-                if (timedoesntWork) {
-                  console.log('time doesn\'t work');
-
-                } else {
-                  var emailArr = people.map(function(obj){
-                    return {email: obj.email}
-                  });
-                  var event = {
-                    summary: people.length === 0 ? `meeting with ${ people }${ subject ? ( ': ' + subject ) : '' }` : subject,
-                    description: people.length === 0 ? `meeting with ${ people }${ subject ? ( ': ' + subject ) : '' }` : subject,
-                    start: {
-                      dateTime: time ? ( date + 'T' + time + '-07:00' ) : ( date + "T5:00:00-07:00" ),
-                      timeZone: "Europe/Paris"
-                    },
-                    end: {
-                      dateTime: time ? ( date + 'T' + time30 + '-07:00' ) : ( date + "T23:59:00-07:00" ),
-                      timeZone: "Europe/Paris"
-                    },
-                    attendees: emailArr
-                  }
-                  console.log('event start time', event.start.dateTime);
-                  var auth = getGoogleAuth();
-                  auth.credentials = user.google;
-                  if ( user.google.expiry_date < new Date().getTime() ) {
-                    auth.refreshAccessToken( function ( err, tokens ) {
-                      if ( err ) {
-                        throw new Error( err );
-                      } else {
-                        user.google = tokens;
-                        user.save();
-                      }
-                    } )
-                  }
-
-                  calendar.events.insert( {
-                    auth: auth,
-                    calendarId: 'primary',
-                    resource: event,
-                  }, function ( err, event ) {
-                    if ( err ) {
-                      console.log( 'There was an error contacting the Calendar service: ' + err );
-                      return;
-                    }
-                    console.log( 'Event created: %s', event.htmlLink );
-                  } );
-                  user.pendingInfo = {}
-                  user.save()
-                  res.send( 'Creating event! :fire: ' );
-                }
             }
         } )
     } else {
